@@ -614,6 +614,14 @@ object PrefManager {
             setPref(OPEN_WEB_LINKS_EXTERNALLY, value)
         }
 
+    // Whether to hide the Android status bar when not in a game (in game list, settings, etc.)
+    private val HIDE_STATUS_BAR_WHEN_NOT_IN_GAME = booleanPreferencesKey("hide_status_bar_when_not_in_game")
+    var hideStatusBarWhenNotInGame: Boolean
+        get() = getPref(HIDE_STATUS_BAR_WHEN_NOT_IN_GAME, false)
+        set(value) {
+            setPref(HIDE_STATUS_BAR_WHEN_NOT_IN_GAME, value)
+        }
+
     private val ITEMS_PER_PAGE = intPreferencesKey("items_per_page")
     var itemsPerPage: Int
         get() = getPref(ITEMS_PER_PAGE, 50)
