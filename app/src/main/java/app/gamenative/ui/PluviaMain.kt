@@ -979,6 +979,9 @@ fun preLaunchApp(
             ContainerUtils.getOrCreateContainer(context, appId)
         }
 
+        // Clear session metadata on every launch to ensure fresh values
+        container.clearSessionMetadata()
+
         // set up Ubuntu file system
         SplitCompat.install(context)
         if (!SteamService.isImageFsInstallable(context, container.containerVariant)) {

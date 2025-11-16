@@ -85,6 +85,7 @@ public class Container {
     private File rootDir;
     private String installPath = "";
     private JSONObject extraData;
+    private JSONObject sessionMetadata;
     private int rcfileId = 0;
     private String midiSoundFont = "";
     private int inputType = WinHandler.PreferredInputApi.BOTH.ordinal();
@@ -463,6 +464,36 @@ public class Container {
         }
     }
 
+    public String getSessionMetadata(String name) {
+        return getSessionMetadata(name, "");
+    }
+
+    public String getSessionMetadata(String name, String fallback) {
+        try {
+            return sessionMetadata != null && sessionMetadata.has(name) ? sessionMetadata.getString(name) : fallback;
+        }
+        catch (JSONException e) {
+            return fallback;
+        }
+    }
+
+    public void putSessionMetadata(String name, Object value) {
+        if (sessionMetadata == null) sessionMetadata = new JSONObject();
+        try {
+            if (value != null) {
+                sessionMetadata.put(name, value);
+            }
+            else sessionMetadata.remove(name);
+        }
+        catch (JSONException e) {
+            Log.e("Container", "Failed to put session metadata: " + e);
+        }
+    }
+
+    public void clearSessionMetadata() {
+        sessionMetadata = null;
+    }
+
     public String getWineVersion() {
         return wineVersion;
     }
@@ -597,6 +628,7 @@ public class Container {
             data.put("box64Preset", box64Preset);
             data.put("desktopTheme", desktopTheme);
             data.put("extraData", extraData);
+            data.put("sessionMetadata", sessionMetadata);
             data.put("rcfileId", rcfileId);
             data.put("midiSoundFont", midiSoundFont);
             data.put("lc_all", lc_all);
@@ -715,6 +747,15 @@ public class Container {
                 case "extraData" : {
                     JSONObject extraData = data.getJSONObject(key);
                     setExtraData(extraData);
+                    break;
+                }
+                case "sessionMetadata" : {
+                    try {
+                        JSONObject sessionMetadata = data.getJSONObject(key);
+                        this.sessionMetadata = sessionMetadata;
+                    } catch (JSONException e) {
+                        this.sessionMetadata = null;
+                    }
                     break;
                 }
                 case "wineVersion" :

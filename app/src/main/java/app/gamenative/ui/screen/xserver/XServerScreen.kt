@@ -1322,6 +1322,14 @@ private fun exit(winHandler: WinHandler?, environment: XEnvironment?, frameRatin
             "avg_fps" to (frameRating?.avgFPS ?: 0.0),
             "container_config" to container.containerJson)
     )
+    
+    // Store session data in container metadata
+    frameRating?.let { rating ->
+        container.putSessionMetadata("avg_fps", rating.avgFPS)
+        container.putSessionMetadata("session_length_sec", rating.sessionLengthSec.toInt())
+        container.saveData()
+    }
+    
     winHandler?.stop()
     environment?.stopEnvironmentComponents()
     SteamService.isGameRunning = false
