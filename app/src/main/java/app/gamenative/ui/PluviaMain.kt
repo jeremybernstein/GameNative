@@ -995,10 +995,16 @@ fun PluviaMain(
                         CoroutineScope(Dispatchers.Main).launch {
                             val currentRoute = navController.currentBackStackEntry
                                 ?.destination
-                                ?.route // ← this is the screen’s route string
+                                ?.route
 
                             if (currentRoute == PluviaScreen.XServer.route) {
-                                navController.popBackStack()
+                                // pop to Home to avoid loops after process death
+                                val popped = navController.popBackStack(PluviaScreen.Home.route, inclusive = false)
+                                if (!popped) {
+                                    navController.navigate(PluviaScreen.Home.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
                             }
                         }
                     },
