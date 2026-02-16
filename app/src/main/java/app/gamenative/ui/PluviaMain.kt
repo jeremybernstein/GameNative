@@ -140,7 +140,10 @@ fun PluviaMain(
         viewModel.uiEvent.collect { event ->
             when (event) {
                 MainViewModel.MainUiEvent.LaunchApp -> {
-                    navController.navigate(PluviaScreen.XServer.route)
+                    navController.navigate(PluviaScreen.XServer.route) {
+                        // clear intermediate screens so back from XServer returns to Home
+                        popUpTo(PluviaScreen.Home.route) { inclusive = false }
+                    }
                 }
 
                 is MainViewModel.MainUiEvent.ExternalGameLaunch -> {
