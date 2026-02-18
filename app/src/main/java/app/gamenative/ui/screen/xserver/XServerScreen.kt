@@ -1832,6 +1832,9 @@ private fun setupXEnvironment(
         guestProgramLauncherComponent.box86Version = container.box86Version
         guestProgramLauncherComponent.box86Preset = container.box86Preset
         guestProgramLauncherComponent.box64Preset = container.box64Preset
+        if (guestProgramLauncherComponent is BionicProgramLauncherComponent) {
+            guestProgramLauncherComponent.setFEXCorePreset(container.fexCorePreset)
+        }
         guestProgramLauncherComponent.setPreUnpack {
             unpackExecutableFile(
                 context = context,
@@ -1947,6 +1950,7 @@ private fun setupXEnvironment(
         Timber.i("Box64 Preset: ${container.box64Preset}")
         Timber.i("Box86 Version: ${container.box86Version}")
         Timber.i("Box86 Preset: ${container.box86Preset}")
+        Timber.i("FEXCore Preset: ${container.fexCorePreset}")
         Timber.i("CPU List: ${container.cpuList}")
         Timber.i("CPU List WoW64: ${container.cpuListWoW64}")
         Timber.i("Env Vars (Container Base): ${container.envVars}") // Log base container vars
