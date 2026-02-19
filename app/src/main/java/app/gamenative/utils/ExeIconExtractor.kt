@@ -90,8 +90,10 @@ object ExeIconExtractor {
             val rawSize = hb.getInt(base + 16)
             val rawPtr = hb.getInt(base + 20)
             val virtualSize = hb.getInt(base + 8)
-            val sectionEnd = va + maxOf(rawSize, virtualSize)
-            if (resourceDirRva >= va && resourceDirRva < sectionEnd && rawPtr > 0) {
+            // use Long to avoid Int overflow on large VAs
+            val sectionStart = va.toLong()
+            val sectionEnd = sectionStart + maxOf(rawSize, virtualSize).toLong()
+            if (resourceDirRva.toLong() >= sectionStart && resourceDirRva.toLong() < sectionEnd && rawPtr > 0) {
                 rsrcVA = va
                 rsrcRawPtr = rawPtr
                 rsrcRawSize = rawSize
