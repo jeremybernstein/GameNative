@@ -1161,22 +1161,18 @@ fun preLaunchApp(
         }
 
         // download any missing manifest components (wine/proton, dxvk, box64, etc.)
-        try {
-            val configJson = kotlinx.serialization.json.Json.parseToJsonElement(
-                container.containerJson
-            ).jsonObject
-            val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
-                context, configJson, "exact_gpu_match",
-            )
-            for (request in missingRequests) {
-                setLoadingMessage("Downloading ${request.entry.name}")
-                setLoadingProgress(0f)
-                ManifestInstaller.installManifestEntry(
-                    context, request.entry, request.isDriver, request.contentType,
-                ) { progress -> setLoadingProgress(progress) }
-            }
-        } catch (e: Exception) {
-            Timber.w(e, "Failed to install missing manifest components")
+        val configJson = kotlinx.serialization.json.Json.parseToJsonElement(
+            container.containerJson
+        ).jsonObject
+        val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
+            context, configJson, "exact_gpu_match",
+        )
+        for (request in missingRequests) {
+            setLoadingMessage("Downloading ${request.entry.name}")
+            setLoadingProgress(0f)
+            ManifestInstaller.installManifestEntry(
+                context, request.entry, request.isDriver, request.contentType,
+            ) { progress -> setLoadingProgress(progress) }
         }
 
         val loadingMessage = if (container.containerVariant.equals(Container.GLIBC)) {
