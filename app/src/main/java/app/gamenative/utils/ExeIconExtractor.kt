@@ -170,7 +170,7 @@ object ExeIconExtractor {
         if (groupDataEntryOff < 0 || groupDataEntryOff + 16 > rsrcRawSize) return false
         val groupDataRva = bb.getInt(groupDataEntryOff)
         val groupSize = bb.getInt(groupDataEntryOff + 4)
-        if (groupSize <= 0) return false
+        if (groupSize < 6) return false // GRPICONDIR header is 6 bytes
         val groupDataOff = rvaToRsrc(groupDataRva)
         if (groupDataOff < 0 || groupDataOff + groupSize > rsrcRawSize) return false
 
