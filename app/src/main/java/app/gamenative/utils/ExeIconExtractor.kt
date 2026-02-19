@@ -165,7 +165,7 @@ object ExeIconExtractor {
         if (groupIdDirOff < 0) return false
         val langEntries = readDirectory(groupIdDirOff)
         val groupLang = langEntries.firstOrNull() ?: return false
-        // data entry offset is relative to resource root
+        if (groupLang.isSubdir) return false
         val groupDataEntryOff = subdirOffset(groupLang.dataOrSubdirRva)
         if (groupDataEntryOff < 0 || groupDataEntryOff + 16 > rsrcRawSize) return false
         val groupDataRva = bb.getInt(groupDataEntryOff)
@@ -215,6 +215,7 @@ object ExeIconExtractor {
             if (langDirOff < 0) return null
             val langs = readDirectory(langDirOff)
             val lang = langs.firstOrNull() ?: return null
+            if (lang.isSubdir) return null
             val dataEntryOff = subdirOffset(lang.dataOrSubdirRva)
             if (dataEntryOff < 0 || dataEntryOff + 16 > rsrcRawSize) return null
             val dataRva = bb.getInt(dataEntryOff)
