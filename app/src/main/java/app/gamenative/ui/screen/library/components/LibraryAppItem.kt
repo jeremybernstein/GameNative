@@ -93,11 +93,14 @@ internal fun AppItem(
     var hideText by remember { mutableStateOf(true) }
     var alpha by remember { mutableFloatStateOf(1f) }
     var showIconFallback by remember { mutableStateOf(false) }
+    // prevents recomposition loop: failure composables re-fire every recomposition
+    var iconFallbackFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(paneType) {
         hideText = true
         alpha = 1f
         showIconFallback = false
+        iconFallbackFailed = false
     }
 
     // Reset alpha and hideText when image URL changes (e.g., when new images are fetched)
@@ -106,6 +109,7 @@ internal fun AppItem(
             hideText = true
             alpha = 1f
             showIconFallback = false
+            iconFallbackFailed = false
         }
     }
 
@@ -170,7 +174,7 @@ internal fun AppItem(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp)),
             ) {
-                val iconUrl = remember(appInfo.appId) {
+                val iconUrl = remember(appInfo.appId, appInfo.gameSource, imageRefreshCounter) {
                     if (appInfo.gameSource == GameSource.CUSTOM_GAME) {
                         val path = CustomGameScanner.findIconFileForCustomGame(context, appInfo.appId)
                         if (!path.isNullOrEmpty()) {
@@ -284,6 +288,7 @@ internal fun AppItem(
                             hideText = true
                             alpha = 1f
                             showIconFallback = false
+                            iconFallbackFailed = false
                         }
                     }
 
@@ -295,7 +300,7 @@ internal fun AppItem(
                                 .alpha(alpha),
                             image = { imageUrl },
                             onFailure = {
-                                if (!iconUrl.isNullOrEmpty()) {
+                                if (!iconUrl.isNullOrEmpty() && !iconFallbackFailed) {
                                     showIconFallback = true
                                 }
                                 hideText = false
@@ -319,6 +324,7 @@ internal fun AppItem(
                                     imageModifier = Modifier.clip(RoundedCornerShape(10.dp)),
                                     image = { iconUrl },
                                     onFailure = {
+                                        iconFallbackFailed = true
                                         showIconFallback = false
                                     },
                                 )
