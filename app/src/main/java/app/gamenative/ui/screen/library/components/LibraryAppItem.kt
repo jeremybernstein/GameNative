@@ -92,10 +92,12 @@ internal fun AppItem(
     val context = LocalContext.current
     var hideText by remember { mutableStateOf(true) }
     var alpha by remember { mutableFloatStateOf(1f) }
+    var showIconFallback by remember { mutableStateOf(false) }
 
     LaunchedEffect(paneType) {
         hideText = true
         alpha = 1f
+        showIconFallback = false
     }
 
     // Reset alpha and hideText when image URL changes (e.g., when new images are fetched)
@@ -103,6 +105,7 @@ internal fun AppItem(
         if (paneType != PaneType.LIST) {
             hideText = true
             alpha = 1f
+            showIconFallback = false
         }
     }
 
@@ -167,19 +170,20 @@ internal fun AppItem(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp)),
             ) {
-                if (paneType == PaneType.LIST) {
-                    val iconUrl = remember(appInfo.appId) {
-                        if (appInfo.gameSource == GameSource.CUSTOM_GAME) {
-                            val path = CustomGameScanner.findIconFileForCustomGame(context, appInfo.appId)
-                            if (!path.isNullOrEmpty()) {
-                                if (path.startsWith("file://")) path else "file://$path"
-                            } else {
-                                appInfo.clientIconUrl
-                            }
+                val iconUrl = remember(appInfo.appId) {
+                    if (appInfo.gameSource == GameSource.CUSTOM_GAME) {
+                        val path = CustomGameScanner.findIconFileForCustomGame(context, appInfo.appId)
+                        if (!path.isNullOrEmpty()) {
+                            if (path.startsWith("file://")) path else "file://$path"
                         } else {
                             appInfo.clientIconUrl
                         }
+                    } else {
+                        appInfo.clientIconUrl
                     }
+                }
+
+                if (paneType == PaneType.LIST) {
                     ListItemImage(
                         modifier = Modifier.size(56.dp),
                         imageModifier = Modifier.clip(RoundedCornerShape(10.dp)),
@@ -279,6 +283,7 @@ internal fun AppItem(
                         if (paneType != PaneType.LIST) {
                             hideText = true
                             alpha = 1f
+                            showIconFallback = false
                         }
                     }
 
@@ -290,10 +295,35 @@ internal fun AppItem(
                                 .alpha(alpha),
                             image = { imageUrl },
                             onFailure = {
+                                if (!iconUrl.isNullOrEmpty()) {
+                                    showIconFallback = true
+                                }
                                 hideText = false
                                 alpha = 0.1f
                             },
                         )
+
+                        // banner failed but icon available — show icon on solid bg
+                        if (showIconFallback) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ListItemImage(
+                                    modifier = Modifier.size(
+                                        if (paneType == PaneType.GRID_CAPSULE) 72.dp else 56.dp,
+                                    ),
+                                    imageModifier = Modifier.clip(RoundedCornerShape(10.dp)),
+                                    image = { iconUrl },
+                                    onFailure = {
+                                        showIconFallback = false
+                                    },
+                                )
+                            }
+                        }
 
                         // Header overlay with compatibility status
                         compatibilityStatus?.let { status ->
