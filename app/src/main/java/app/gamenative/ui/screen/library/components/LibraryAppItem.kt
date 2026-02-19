@@ -321,6 +321,8 @@ internal fun AppItem(
                         )
 
                         // banner failed but icon available — show icon on solid bg
+                        // relies on SideEffect (not LaunchedEffect) in ListItemImage so
+                        // onFailure re-fires when iconUrl resolves after banner failure
                         if (showIconFallback) {
                             Box(
                                 modifier = Modifier

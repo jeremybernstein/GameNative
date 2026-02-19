@@ -203,16 +203,16 @@ object CustomGameScanner {
         // check for already-extracted icon from container exe
         try {
             val cm = ContainerManager(context)
-            if (cm.hasContainer(appId)) {
-                val container = cm.getContainerById(appId)
-                val relExe = container.executablePath
-                if (!relExe.isNullOrEmpty()) {
-                    val exeFile = File(folder, relExe.replace('/', File.separatorChar))
-                    val outIco = File(exeFile.parentFile, exeFile.nameWithoutExtension + ".extracted.ico")
-                    if (outIco.exists()) return outIco.absolutePath
-                }
+            val container = cm.getContainerById(appId)
+            val relExe = container?.executablePath
+            if (!relExe.isNullOrEmpty()) {
+                val exeFile = File(folder, relExe.replace('/', File.separatorChar))
+                val outIco = File(exeFile.parentFile, exeFile.nameWithoutExtension + ".extracted.ico")
+                if (outIco.exists()) return outIco.absolutePath
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Timber.tag("CustomGameScanner").d(e, "Error checking cached icon for $appId")
+        }
 
         return findNearbyImageIcon(folder, null)
     }
