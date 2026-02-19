@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -43,7 +44,7 @@ internal fun ListItemImage(
             CircularProgressIndicator()
         },
         failure = {
-            onFailure()
+            SideEffect { onFailure() }
             Icon(Icons.Filled.QuestionMark, null)
         },
         previewPlaceholder = painterResource(R.drawable.ic_logo_color),
