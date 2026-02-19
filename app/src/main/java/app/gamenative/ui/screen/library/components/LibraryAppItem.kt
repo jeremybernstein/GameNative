@@ -174,13 +174,19 @@ internal fun AppItem(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp)),
             ) {
-                val iconUrl = remember(appInfo.appId, appInfo.gameSource, imageRefreshCounter) {
+                // LIST triggers extraction; GRID only uses cached/lightweight URL
+                // NOTE: appInfo.clientIconUrl triggers extraction for CUSTOM_GAME, avoid in grid
+                val iconUrl = remember(appInfo.appId, appInfo.gameSource, paneType, imageRefreshCounter) {
                     if (appInfo.gameSource == GameSource.CUSTOM_GAME) {
-                        val path = CustomGameScanner.findIconFileForCustomGame(context, appInfo.appId)
+                        val path = if (paneType == PaneType.LIST) {
+                            CustomGameScanner.findIconFileForCustomGame(context, appInfo.appId)
+                        } else {
+                            CustomGameScanner.findCachedIconForCustomGame(context, appInfo.appId)
+                        }
                         if (!path.isNullOrEmpty()) {
                             if (path.startsWith("file://")) path else "file://$path"
                         } else {
-                            appInfo.clientIconUrl
+                            null
                         }
                     } else {
                         appInfo.clientIconUrl

@@ -214,6 +214,39 @@ object CustomGameScanner {
         return fromHeuristic
     }
 
+    // like findIconFileForCustomGame but never triggers EXE extraction
+    fun findCachedIconForCustomGame(context: Context, appId: String): String? {
+        val folderPath = getFolderPathFromAppId(appId) ?: return null
+        val folder = File(folderPath)
+        if (!folder.exists() || !folder.isDirectory) return null
+
+        val steamGridLogo = folder.listFiles { file ->
+            file.isFile && file.name.startsWith("steamgriddb_logo", ignoreCase = true) &&
+                (
+                    file.name.endsWith(".png", ignoreCase = true) ||
+                        file.name.endsWith(".jpg", ignoreCase = true) ||
+                        file.name.endsWith(".webp", ignoreCase = true)
+                    )
+        }?.firstOrNull()
+        if (steamGridLogo != null) return steamGridLogo.absolutePath
+
+        // check for already-extracted icon from container exe
+        try {
+            val cm = ContainerManager(context)
+            if (cm.hasContainer(appId)) {
+                val container = cm.getContainerById(appId)
+                val relExe = container.executablePath
+                if (!relExe.isNullOrEmpty()) {
+                    val exeFile = File(folder, relExe.replace('/', File.separatorChar))
+                    val outIco = File(exeFile.parentFile, exeFile.nameWithoutExtension + ".extracted.ico")
+                    if (outIco.exists()) return outIco.absolutePath
+                }
+            }
+        } catch (_: Exception) { }
+
+        return findNearbyImageIcon(folder, null)
+    }
+
     // Shared helper for .ico/.png heuristic
     private fun findNearbyImageIcon(folder: File, uniqueExeRel: String?): String? {
         fun File.icoFiles(): List<File> = this.listFiles { f ->
