@@ -231,8 +231,12 @@ object ExeIconExtractor {
         // collect valid icon data, skipping entries where data lookup fails
         data class IconEntry(val ge: GroupEntry, val data: ByteArray)
         val entries = ArrayList<IconEntry>(groupEntries.size)
+        var totalDataSize = 0L
         for (ge in groupEntries) {
             val data = findIconDataById(ge.id) ?: continue
+            totalDataSize += data.size
+            // malformed PE could reference overlapping regions — cap total
+            if (totalDataSize > MAX_RSRC_SECTION) return false
             entries.add(IconEntry(ge, data))
         }
         if (entries.isEmpty()) return false
