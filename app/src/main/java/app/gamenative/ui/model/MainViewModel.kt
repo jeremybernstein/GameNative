@@ -443,8 +443,8 @@ class MainViewModel @Inject constructor(
             bootingSplashTimeoutJob = null
             setShowBootingSplash(false)
 
-            // You could also show an error dialog here if needed
             Timber.tag("MainViewModel").e("Game launch error: $error")
+            _uiEvent.send(MainUiEvent.ShowToast(error))
         }
     }
 

@@ -837,6 +837,19 @@ fun XServerScreen(
                             Timber.i("WineInfo.MAIN_WINE_VERSION is: " + WineInfo.MAIN_WINE_VERSION)
                             Timber.i("Wine path for wineinfo is " + xServerState.value.wineInfo.path)
 
+                            // guard: wine/proton still missing after download attempt
+                            if (!xServerState.value.wineInfo.isMainWineVersion() &&
+                                xServerState.value.wineInfo.path.isNullOrEmpty()
+                            ) {
+                                val msg = context.getString(R.string.error_wine_not_installed, wineVersion)
+                                Timber.e(msg)
+                                onGameLaunchError?.invoke(msg)
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    navigateBack()
+                                }
+                                return@submit
+                            }
+
                             if (!xServerState.value.wineInfo.isMainWineVersion()) {
                                 Timber.i("Settings wine path to: ${xServerState.value.wineInfo.path}")
                                 imageFs.setWinePath(xServerState.value.wineInfo.path)
@@ -1912,7 +1925,8 @@ private fun setupXEnvironment(
 
     guestProgramLauncherComponent.envVars = envVars
     guestProgramLauncherComponent.setTerminationCallback { status ->
-        if (status != 0) {
+        // 137=SIGKILL, 143=SIGTERM — normal quit signals
+        if (status != 0 && status != 137 && status != 143) {
             Timber.e("Guest program terminated with status: $status")
             onGameLaunchError?.invoke("Game terminated with error status: $status")
             navigateBack()

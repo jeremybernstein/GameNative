@@ -69,8 +69,11 @@ import app.gamenative.ui.screen.login.UserLoginScreen
 import app.gamenative.ui.screen.settings.SettingsScreen
 import app.gamenative.ui.screen.xserver.XServerScreen
 import app.gamenative.ui.theme.PluviaTheme
+import app.gamenative.utils.BestConfigService
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.CustomGameScanner
+import app.gamenative.utils.ManifestInstaller
+import kotlinx.serialization.json.jsonObject
 import app.gamenative.utils.GameFeedbackUtils
 import app.gamenative.utils.IntentLaunchManager
 import app.gamenative.utils.UpdateChecker
@@ -1156,6 +1159,26 @@ fun preLaunchApp(
                 "steam-token.tzst",
             ).await()
         }
+
+        // download any missing manifest components (wine/proton, dxvk, box64, etc.)
+        try {
+            val configJson = kotlinx.serialization.json.Json.parseToJsonElement(
+                container.containerJson
+            ).jsonObject
+            val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
+                context, configJson, "exact_gpu_match",
+            )
+            for (request in missingRequests) {
+                setLoadingMessage("Downloading ${request.entry.name}")
+                setLoadingProgress(0f)
+                ManifestInstaller.installManifestEntry(
+                    context, request.entry, request.isDriver, request.contentType,
+                ) { progress -> setLoadingProgress(progress) }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to install missing manifest components")
+        }
+
         val loadingMessage = if (container.containerVariant.equals(Container.GLIBC)) {
             context.getString(R.string.main_installing_glibc)
         } else {
