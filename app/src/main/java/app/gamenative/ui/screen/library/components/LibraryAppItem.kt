@@ -42,9 +42,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -176,12 +179,14 @@ internal fun AppItem(
             ) {
                 // LIST triggers extraction; GRID only uses cached/lightweight URL
                 // NOTE: appInfo.clientIconUrl triggers extraction for CUSTOM_GAME, avoid in grid
-                val iconUrl = remember(appInfo.appId, appInfo.gameSource, paneType) {
-                    if (appInfo.gameSource == GameSource.CUSTOM_GAME) {
-                        val path = if (paneType == PaneType.LIST) {
-                            CustomGameScanner.findIconFileForCustomGame(context, appInfo.appId)
-                        } else {
-                            CustomGameScanner.findCachedIconForCustomGame(context, appInfo.appId)
+                val iconUrl by produceState<String?>(null, appInfo.appId, appInfo.gameSource, paneType) {
+                    value = if (appInfo.gameSource == GameSource.CUSTOM_GAME) {
+                        val path = withContext(Dispatchers.IO) {
+                            if (paneType == PaneType.LIST) {
+                                CustomGameScanner.findIconFileForCustomGame(context, appInfo.appId)
+                            } else {
+                                CustomGameScanner.findCachedIconForCustomGame(context, appInfo.appId)
+                            }
                         }
                         if (!path.isNullOrEmpty()) {
                             if (path.startsWith("file://")) path else "file://$path"
