@@ -35,7 +35,12 @@ object ExeIconExtractor {
 
                 val peHeaderOff = hb.getInt(0x3C)
                 if (peHeaderOff <= 0 || peHeaderOff + 4 > headerSize) return false
-                if (hb.get(peHeaderOff).toInt() != 'P'.code || hb.get(peHeaderOff + 1).toInt() != 'E'.code) return false
+                // full 4-byte PE signature: "PE\0\0"
+                if (hb.get(peHeaderOff).toInt() != 'P'.code ||
+                    hb.get(peHeaderOff + 1).toInt() != 'E'.code ||
+                    hb.get(peHeaderOff + 2).toInt() != 0 ||
+                    hb.get(peHeaderOff + 3).toInt() != 0
+                ) return false
 
                 val coffStart = peHeaderOff + 4
                 val numberOfSections = hb.getShort(coffStart + 2).toInt() and 0xFFFF
@@ -222,37 +227,40 @@ object ExeIconExtractor {
             return bytes
         }
 
-        // build ICO: header + entries + concatenated images
-        val images = ArrayList<ByteArray>(groupEntries.size)
-        val entriesBytes = ByteArray(groupEntries.size * 16)
-        var imageOffset = 6 + entriesBytes.size
-        var ei = 0
+        // collect valid icon data, skipping entries where data lookup fails
+        data class IconEntry(val ge: GroupEntry, val data: ByteArray)
+        val entries = ArrayList<IconEntry>(groupEntries.size)
         for (ge in groupEntries) {
             val data = findIconDataById(ge.id) ?: continue
-            images.add(data)
-            val base = ei * 16
-            entriesBytes[base + 0] = ge.width.coerceAtMost(255).toByte()
-            entriesBytes[base + 1] = ge.height.coerceAtMost(255).toByte()
-            entriesBytes[base + 2] = ge.colorCount.coerceAtMost(255).toByte()
-            entriesBytes[base + 3] = 0
-            putShort(entriesBytes, base + 4, ge.planes)
-            putShort(entriesBytes, base + 6, ge.bitCount)
-            putInt(entriesBytes, base + 8, data.size)
-            putInt(entriesBytes, base + 12, imageOffset)
-            imageOffset += data.size
-            ei++
+            entries.add(IconEntry(ge, data))
         }
-        if (images.isEmpty()) return false
+        if (entries.isEmpty()) return false
 
-        val out = ByteArray(6 + entriesBytes.size + images.sumOf { it.size })
+        // build ICO: header + directory entries + concatenated images
+        val entriesBytes = ByteArray(entries.size * 16)
+        var imageOffset = 6 + entriesBytes.size
+        for ((i, entry) in entries.withIndex()) {
+            val base = i * 16
+            entriesBytes[base + 0] = entry.ge.width.coerceAtMost(255).toByte()
+            entriesBytes[base + 1] = entry.ge.height.coerceAtMost(255).toByte()
+            entriesBytes[base + 2] = entry.ge.colorCount.coerceAtMost(255).toByte()
+            entriesBytes[base + 3] = 0
+            putShort(entriesBytes, base + 4, entry.ge.planes)
+            putShort(entriesBytes, base + 6, entry.ge.bitCount)
+            putInt(entriesBytes, base + 8, entry.data.size)
+            putInt(entriesBytes, base + 12, imageOffset)
+            imageOffset += entry.data.size
+        }
+
+        val out = ByteArray(6 + entriesBytes.size + entries.sumOf { it.data.size })
         putShort(out, 0, 0) // reserved
         putShort(out, 2, 1) // type ico
-        putShort(out, 4, images.size)
+        putShort(out, 4, entries.size)
         System.arraycopy(entriesBytes, 0, out, 6, entriesBytes.size)
         var off = 6 + entriesBytes.size
-        for (img in images) {
-            System.arraycopy(img, 0, out, off, img.size)
-            off += img.size
+        for (entry in entries) {
+            System.arraycopy(entry.data, 0, out, off, entry.data.size)
+            off += entry.data.size
         }
 
         outIcoFile.outputStream().use { it.write(out) }
