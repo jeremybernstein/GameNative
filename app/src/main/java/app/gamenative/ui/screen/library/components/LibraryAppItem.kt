@@ -308,8 +308,9 @@ internal fun AppItem(
                             onFailure = {
                                 if (!iconUrl.isNullOrEmpty() && !iconFallbackFailed) {
                                     showIconFallback = true
+                                } else {
+                                    hideText = false
                                 }
-                                hideText = false
                                 alpha = 0.1f
                             },
                         )
@@ -332,6 +333,7 @@ internal fun AppItem(
                                     onFailure = {
                                         iconFallbackFailed = true
                                         showIconFallback = false
+                                        hideText = false
                                     },
                                 )
                             }
