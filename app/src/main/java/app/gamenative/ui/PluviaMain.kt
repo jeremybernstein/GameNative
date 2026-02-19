@@ -1005,7 +1005,7 @@ fun PluviaMain(
                                 val popped = navController.popBackStack(PluviaScreen.Home.route, inclusive = false)
                                 if (!popped) {
                                     navController.navigate(PluviaScreen.Home.route) {
-                                        popUpTo(0) { inclusive = true }
+                                        popUpTo(navController.graph.id) { inclusive = true }
                                     }
                                 }
                             }
