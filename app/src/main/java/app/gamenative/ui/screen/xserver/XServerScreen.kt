@@ -76,8 +76,10 @@ import android.widget.Toast
 import app.gamenative.ui.component.settings.SettingsListDropdown
 import app.gamenative.ui.data.XServerState
 import app.gamenative.ui.theme.settingsTileColors
+import app.gamenative.utils.BestConfigService
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.CustomGameScanner
+import app.gamenative.utils.ManifestInstaller
 import app.gamenative.utils.SteamTokenLogin
 import app.gamenative.utils.SteamUtils
 import com.posthog.PostHog
@@ -141,6 +143,8 @@ import com.winlator.xserver.ScreenInfo
 import com.winlator.xserver.Window
 import com.winlator.xserver.WindowManager
 import com.winlator.xserver.XServer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -837,16 +841,36 @@ fun XServerScreen(
                             Timber.i("WineInfo.MAIN_WINE_VERSION is: " + WineInfo.MAIN_WINE_VERSION)
                             Timber.i("Wine path for wineinfo is " + xServerState.value.wineInfo.path)
 
+                            // download any missing manifest components (wine/proton, dxvk, etc.)
+                            val configJson = Json.parseToJsonElement(
+                                container.containerJson,
+                            ).jsonObject
+                            val missingRequests = runBlocking {
+                                BestConfigService.resolveMissingManifestInstallRequests(
+                                    context, configJson, "exact_gpu_match",
+                                )
+                            }
+                            for (request in missingRequests) {
+                                Timber.i("Downloading missing component: ${request.entry.name}")
+                                runBlocking {
+                                    ManifestInstaller.installManifestEntry(
+                                        context, request.entry, request.isDriver, request.contentType,
+                                    ) { /* progress */ }
+                                }
+                            }
+                            if (missingRequests.isNotEmpty()) {
+                                // re-resolve wineInfo after downloads
+                                contentsManager.syncContents()
+                                xServerState.value = xServerState.value.copy(
+                                    wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion),
+                                )
+                            }
+
                             // guard: wine/proton still missing after download attempt
                             if (!xServerState.value.wineInfo.isMainWineVersion() &&
                                 xServerState.value.wineInfo.path.isNullOrEmpty()
                             ) {
-                                val msg = context.getString(R.string.error_wine_not_installed, wineVersion)
-                                Timber.e(msg)
-                                onGameLaunchError?.invoke(msg)
-                                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                    navigateBack()
-                                }
+                                Timber.e("Wine/Proton '%s' not available, aborting launch", wineVersion)
                                 return@submit
                             }
 
@@ -1925,8 +1949,7 @@ private fun setupXEnvironment(
 
     guestProgramLauncherComponent.envVars = envVars
     guestProgramLauncherComponent.setTerminationCallback { status ->
-        // 137=SIGKILL, 143=SIGTERM — normal quit signals
-        if (status != 0 && status != 137 && status != 143) {
+        if (status != 0) {
             Timber.e("Guest program terminated with status: $status")
             onGameLaunchError?.invoke("Game terminated with error status: $status")
             navigateBack()

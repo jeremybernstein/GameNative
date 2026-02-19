@@ -1018,5 +1018,4 @@
     <string name="manifest_content_untrusted">Content is not trusted and was not installed.</string>
     <string name="manifest_type_mismatch">Downloaded content does not match expected type.</string>
     <string name="manifest_glibc_not_supported">GLIBC builds are not supported.</string>
-    <string name="error_wine_not_installed">Wine/Proton package \'%1$s\' is not installed and could not be downloaded.</string>
 </resources>

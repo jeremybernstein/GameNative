@@ -81,75 +81,6 @@ data class KnownConfigInstallState(
     val label: String,
 )
 
-private suspend fun installMissingComponentsForConfig(
-    context: Context,
-    gameId: Int,
-    configJson: kotlinx.serialization.json.JsonObject,
-    matchType: String,
-    uiScope: CoroutineScope,
-): Boolean {
-    val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
-        context,
-        configJson,
-        matchType,
-    )
-    if (missingRequests.isEmpty()) return true
-
-    uiScope.launch(Dispatchers.Main.immediate) {
-        SteamAppScreen.showKnownConfigInstallState(
-            gameId,
-            KnownConfigInstallState(
-                visible = true,
-                progress = -1f,
-                label = missingRequests.first().entry.name,
-            ),
-        )
-    }
-
-    for (request in missingRequests) {
-        val label = request.entry.id
-        uiScope.launch(Dispatchers.Main.immediate) {
-            SteamAppScreen.showKnownConfigInstallState(
-                gameId,
-                KnownConfigInstallState(
-                    visible = true,
-                    progress = -1f,
-                    label = label,
-                ),
-            )
-        }
-        val result = ManifestInstaller.installManifestEntry(
-            context = context,
-            entry = request.entry,
-            isDriver = request.isDriver,
-            contentType = request.contentType,
-            onProgress = { progress ->
-                val clamped = progress.coerceIn(0f, 1f)
-                uiScope.launch(Dispatchers.Main.immediate) {
-                    SteamAppScreen.showKnownConfigInstallState(
-                        gameId,
-                        KnownConfigInstallState(
-                            visible = true,
-                            progress = clamped,
-                            label = label,
-                        ),
-                    )
-                }
-            },
-        )
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
-        }
-        if (!result.success) {
-            uiScope.launch(Dispatchers.Main.immediate) { SteamAppScreen.hideKnownConfigInstallState(gameId) }
-            return false
-        }
-    }
-
-    uiScope.launch(Dispatchers.Main.immediate) { SteamAppScreen.hideKnownConfigInstallState(gameId) }
-    return true
-}
-
 private suspend fun applyConfigForContainer(
     context: Context,
     gameId: Int,
@@ -159,15 +90,6 @@ private suspend fun applyConfigForContainer(
     uiScope: CoroutineScope,
 ): Boolean {
     return try {
-        val installsOk = installMissingComponentsForConfig(
-            context,
-            gameId,
-            configJson,
-            matchType,
-            uiScope,
-        )
-        if (!installsOk) return false
-
         val container = ContainerUtils.getOrCreateContainer(context, appId)
         val containerData = ContainerUtils.toContainerData(container)
         val parsedConfig = BestConfigService.parseConfigToContainerData(
