@@ -179,7 +179,7 @@ internal fun AppItem(
             ) {
                 // LIST triggers extraction; GRID only uses cached/lightweight URL
                 // NOTE: appInfo.clientIconUrl triggers extraction for CUSTOM_GAME, avoid in grid
-                val iconUrl by produceState<String?>(null, appInfo.appId, appInfo.gameSource, paneType) {
+                val iconUrl by produceState<String?>(null, appInfo.appId, appInfo.gameSource, paneType, imageRefreshCounter) {
                     value = if (appInfo.gameSource == GameSource.CUSTOM_GAME) {
                         val path = withContext(Dispatchers.IO) {
                             if (paneType == PaneType.LIST) {
