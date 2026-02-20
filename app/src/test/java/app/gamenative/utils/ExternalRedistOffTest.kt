@@ -3,6 +3,7 @@ package app.gamenative.utils
 import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
+import app.gamenative.BuildConfig
 import com.winlator.container.Container
 import com.winlator.container.ContainerData
 import org.json.JSONObject
@@ -39,7 +40,7 @@ class ExternalRedistOffTest {
             .put("cpuListWoW64", "0,1,2,3")
             .put("suspendPolicy", "manual")
             .put("wincomponents", wincomponents)
-        val intent = Intent("app.gamenative.LAUNCH_GAME")
+        val intent = Intent("${BuildConfig.APPLICATION_ID}.LAUNCH_GAME")
             .putExtra("app_id", 400)
             .putExtra("container_config", config.toString())
         return IntentLaunchManager.parseLaunchIntent(intent, ApplicationProvider.getApplicationContext())!!.containerConfig!!
