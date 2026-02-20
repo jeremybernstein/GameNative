@@ -69,8 +69,10 @@ import app.gamenative.ui.screen.login.UserLoginScreen
 import app.gamenative.ui.screen.settings.SettingsScreen
 import app.gamenative.ui.screen.xserver.XServerScreen
 import app.gamenative.ui.theme.PluviaTheme
+import app.gamenative.utils.BestConfigService
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.CustomGameScanner
+import app.gamenative.utils.ManifestInstaller
 import app.gamenative.utils.GameFeedbackUtils
 import app.gamenative.utils.IntentLaunchManager
 import app.gamenative.utils.UpdateChecker
@@ -88,6 +90,8 @@ import java.util.Date
 import java.util.EnumSet
 import kotlin.reflect.KFunction2
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1064,9 +1068,24 @@ fun preLaunchApp(
         // Clear session metadata on every launch to ensure fresh values
         container.clearSessionMetadata()
 
+        // download any manifest components (wine/proton, dxvk, etc.) missing from config
+        val gameSource = ContainerUtils.extractGameSourceFromContainerId(appId)
+        if (gameSource == GameSource.STEAM) {
+            val configJson = Json.parseToJsonElement(container.containerJson).jsonObject
+            val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
+                context, configJson, "exact_gpu_match",
+            )
+            for (request in missingRequests) {
+                setLoadingMessage("Downloading ${request.entry.name}")
+                ManifestInstaller.installManifestEntry(
+                    context, request.entry, request.isDriver, request.contentType,
+                ) { progress -> setLoadingProgress(progress.coerceIn(0f, 1f)) }
+            }
+        }
+
         // Check if this is a Custom Game and validate executable selection before installing components
         // Skip the check if booting to container (Open Container menu option)
-        val isCustomGame = ContainerUtils.extractGameSourceFromContainerId(appId) == GameSource.CUSTOM_GAME
+        val isCustomGame = gameSource == GameSource.CUSTOM_GAME
 
         // set up Ubuntu file system
         SplitCompat.install(context)
