@@ -2,6 +2,7 @@ package app.gamenative.utils
 
 import android.content.Context
 import android.content.Intent
+import app.gamenative.BuildConfig
 import app.gamenative.PluviaApp
 import app.gamenative.PrefManager
 import app.gamenative.data.GameSource
@@ -20,7 +21,7 @@ object IntentLaunchManager {
 
     private const val EXTRA_GAME_SOURCE = "game_source"
     private const val EXTRA_CONTAINER_CONFIG = "container_config"
-    private const val ACTION_LAUNCH_GAME = "app.gamenative.LAUNCH_GAME"
+    private val ACTION_LAUNCH_GAME = "${BuildConfig.APPLICATION_ID}.LAUNCH_GAME"
     private const val ACTION_VIEW = "android.intent.action.VIEW"
     private const val URI_SCHEME = "gamenative"
     private const val URI_HOST = "run"
