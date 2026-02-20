@@ -3,6 +3,8 @@ package com.winlator.winhandler;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+
+import app.gamenative.BuildConfig;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
@@ -520,8 +522,8 @@ public class WinHandler {
         try {
             this.localhost = InetAddress.getLocalHost();
             // Player 1 (currentController) gets the original non-numbered file
-            String p1_mem_path = "/data/data/app.gamenative/files/imagefs/tmp/gamepad.mem";
-            File p1_memFile = new File(p1_mem_path);
+            String tmpDir = "/data/data/" + BuildConfig.APPLICATION_ID + "/files/imagefs/tmp";
+            File p1_memFile = new File(tmpDir, "gamepad.mem");
             p1_memFile.getParentFile().mkdirs();
             try (RandomAccessFile raf = new RandomAccessFile(p1_memFile, "rw")) {
                 raf.setLength(64);
@@ -530,8 +532,7 @@ public class WinHandler {
                 Log.i(TAG, "Successfully created and mapped gamepad file for Player 1");
             }
             for (int i = 0; i < extraGamepadBuffers.length; i++) {
-                String extra_mem_path = "/data/data/app.gamenative/files/imagefs/tmp/gamepad" + (i + 1) + ".mem";
-                File extra_memFile = new File(extra_mem_path);
+                File extra_memFile = new File(tmpDir, "gamepad" + (i + 1) + ".mem");
                 try (RandomAccessFile raf = new RandomAccessFile(extra_memFile, "rw")) {
                     raf.setLength(64);
                     extraGamepadBuffers[i] = raf.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, 64);

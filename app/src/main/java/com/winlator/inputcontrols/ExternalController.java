@@ -2,7 +2,6 @@ package com.winlator.inputcontrols;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -365,10 +364,10 @@ public class ExternalController {
             return false;
         }
         int sources = device.getSources();
-        if (device.isVirtual()) {
-            return false;
-    }
-        return (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+        boolean isVirtual = device.isVirtual();
+        boolean hasGamepad = (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD;
+        boolean hasJoystick = (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+        return !isVirtual && (hasGamepad || hasJoystick);
     }
 
     public static float getCenteredAxis(MotionEvent event, int axis, int historyPos) {

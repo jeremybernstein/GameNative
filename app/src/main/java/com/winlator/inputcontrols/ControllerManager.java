@@ -74,7 +74,6 @@ public class ControllerManager {
         int[] deviceIds = inputManager.getInputDeviceIds();
         for (int deviceId : deviceIds) {
             InputDevice device = inputManager.getInputDevice(deviceId);
-            // We only want physical gamepads/joysticks, not virtual ones or touchscreens.
             if (device != null && !device.isVirtual() && isGameController(device)) {
                 detectedDevices.add(device);
             }
