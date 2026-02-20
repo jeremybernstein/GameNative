@@ -69,6 +69,7 @@ android {
             mapOf(
                 "icon" to iconValue,
                 "roundIcon" to iconRoundValue,
+                "appLabel" to "GameNative",
             ),
         )
 
@@ -113,6 +114,8 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
             signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["appLabel"] = "GameNative Dev"
         }
         release {
             isMinifyEnabled = true
@@ -187,13 +190,13 @@ android {
     //     }
     // }
 
-    // cmake on release builds a proot that fails to process ld-2.31.so
-    // externalNativeBuild {
-    //     cmake {
-    //         path = file("src/main/cpp/CMakeLists.txt")
-    //         version = "3.22.1"
-    //     }
-    // }
+    // build evshim from source (dev only — prebuilt ships in jniLibs for release)
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/evshim/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 
     // (For now) Uncomment for LeakCanary to work.
     // configurations {
