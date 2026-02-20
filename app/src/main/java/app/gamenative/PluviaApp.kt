@@ -93,8 +93,12 @@ class PluviaApp : SplitCompatApplication() {
         }
 
         // Preload all container files in the background
-        appScope.launch {
-            ContainerFilesDownloader.preloadAllContainerFiles(applicationContext)
+        // dev: skip under Robolectric -- every test class boots a fresh app + filesDir,
+        // re-downloading ALL container tzst files from the CDN (suite hangs, network saturates)
+        if (android.os.Build.FINGERPRINT != "robolectric") {
+            appScope.launch {
+                ContainerFilesDownloader.preloadAllContainerFiles(applicationContext)
+            }
         }
 
         // Clear any stale temporary config overrides from previous app sessions

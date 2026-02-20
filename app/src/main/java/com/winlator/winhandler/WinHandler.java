@@ -722,9 +722,9 @@ public class WinHandler {
             }
 
             for (int i = 0; i < extraGamepadBuffers.length; i++) {
-                File extra_mem_path = new File(gamepadShmDir, "gamepad" + (i + 1) + ".mem");
+                File extra_memFile = new File(gamepadShmDir, "gamepad" + (i + 1) + ".mem");
                 if (extraGamepadBuffers[i] != null) continue;
-                extraGamepadRafs[i] = new RandomAccessFile(extra_mem_path, "rw");
+                extraGamepadRafs[i] = new RandomAccessFile(extra_memFile, "rw");
                 extraGamepadRafs[i].setLength(64);
                 extraGamepadBuffers[i] = extraGamepadRafs[i].getChannel().map(FileChannel.MapMode.READ_WRITE, 0, 64);
                 extraGamepadBuffers[i].order(ByteOrder.LITTLE_ENDIAN);
