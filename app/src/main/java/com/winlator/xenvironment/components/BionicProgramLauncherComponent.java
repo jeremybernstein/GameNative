@@ -16,6 +16,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.winlator.PrefManager;
+import com.winlator.winhandler.WinHandler;
 
 import app.gamenative.utils.LsfgVkManager;
 import com.winlator.box86_64.Box86_64Preset;
@@ -203,16 +204,15 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
     private int execGuestProgram() {
 
         final int MAX_PLAYERS = 4;
+        String tmpDir = "/data/data/" + BuildConfig.APPLICATION_ID + "/files/imagefs/tmp";
 
         // Get the number of enabled players directly from ControllerManager.
         for (int i = 0; i < MAX_PLAYERS; i++) {
             String memPath;
             if (i == 0) {
-                // Player 1 uses the original, non-numbered path that is known to work.
-                memPath = "/data/data/app.gamenative/files/imagefs/tmp/gamepad.mem";
+                memPath = tmpDir + "/gamepad.mem";
             } else {
-                // Players 2, 3, 4 use a 1-based index.
-                memPath = "/data/data/app.gamenative/files/imagefs/tmp/gamepad" + i + ".mem";
+                memPath = tmpDir + "/gamepad" + i + ".mem";
             }
 
             File memFile = new File(memPath);
@@ -328,7 +328,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         if (new File(sysvPath).exists()) ld_preload += sysvPath;
 
-
         ld_preload += ":" + evshimPath;
         String dnsV4MappedPath = context.getApplicationInfo().nativeLibraryDir + "/libgamenative_dns_v4mapped.so";
         if (new File(dnsV4MappedPath).exists()) {
@@ -339,6 +338,8 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         envVars.put("LD_PRELOAD", ld_preload);
         envVars.put("EVSHIM_WINE", 1);
         envVars.put("EVSHIM_SHM_NAME", "controller-shm0");
+        // applicationIdSuffix-aware base for .debug builds
+        envVars.put("EVSHIM_BASE_PATH", "/data/data/" + BuildConfig.APPLICATION_ID + "/files");
 
         if (container != null && container.isFasterExternalLoading()) {
             String ffpGameDir = null;
