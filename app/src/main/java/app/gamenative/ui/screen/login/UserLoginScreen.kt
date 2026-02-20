@@ -337,6 +337,9 @@ private fun UserLoginScreenContent(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val defaultFocus = remember { FocusRequester() }
 
+    val context = LocalContext.current
+    val appLabel = context.applicationInfo.loadLabel(context.packageManager).toString()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -360,7 +363,7 @@ private fun UserLoginScreenContent(
             ) {
                 // Logo
                 Text(
-                    text = stringResource(R.string.login_app_name),
+                    text = appLabel,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
                         brush = Brush.horizontalGradient(
