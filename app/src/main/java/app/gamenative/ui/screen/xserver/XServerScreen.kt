@@ -842,6 +842,10 @@ fun XServerScreen(
                                 xServerState.value.wineInfo.path.isNullOrEmpty()
                             ) {
                                 Timber.e("Wine/Proton '%s' not available, aborting launch", wineVersion)
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    Toast.makeText(context, R.string.wine_proton_unavailable, Toast.LENGTH_LONG).show()
+                                    navigateBack()
+                                }
                                 return@submit
                             }
 

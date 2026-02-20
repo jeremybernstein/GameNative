@@ -1153,15 +1153,21 @@ fun preLaunchApp(
 
         // download any manifest components (wine/proton, dxvk, etc.) missing from config
         if (gameSource == GameSource.STEAM) {
-            val configJson = Json.parseToJsonElement(container.containerJson).jsonObject
-            val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
-                context, configJson, "exact_gpu_match",
-            )
-            for (request in missingRequests) {
-                setLoadingMessage("Downloading ${request.entry.name}")
-                ManifestInstaller.installManifestEntry(
-                    context, request.entry, request.isDriver, request.contentType,
-                ) { progress -> setLoadingProgress(progress.coerceIn(0f, 1f)) }
+            try {
+                val configJson = Json.parseToJsonElement(container.containerJson).jsonObject
+                val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
+                    context, configJson, "exact_gpu_match",
+                )
+                for (request in missingRequests) {
+                    setLoadingMessage(context.getString(R.string.main_downloading_entry, request.entry.name))
+                    ManifestInstaller.installManifestEntry(
+                        context, request.entry, request.isDriver, request.contentType,
+                    ) { progress -> setLoadingProgress(progress.coerceIn(0f, 1f)) }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to install manifest components")
+                setLoadingDialogVisible(false)
+                return@launch
             }
         }
 
