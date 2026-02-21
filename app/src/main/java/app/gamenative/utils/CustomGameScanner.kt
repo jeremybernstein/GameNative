@@ -107,18 +107,7 @@ object CustomGameScanner {
         val folder = File(folderPath)
         if (!folder.exists() || !folder.isDirectory) return null
 
-        val steamGridLogo = folder.listFiles { file ->
-            file.isFile && file.name.startsWith("steamgriddb_logo", ignoreCase = true) &&
-                (
-                    file.name.endsWith(".png", ignoreCase = true) ||
-                        file.name.endsWith(".jpg", ignoreCase = true) ||
-                        file.name.endsWith(".webp", ignoreCase = true)
-                    )
-        }?.firstOrNull()
-        if (steamGridLogo != null) {
-            Timber.tag("CustomGameScanner").d("Found SteamGridDB logo: ${steamGridLogo.absolutePath}")
-            return steamGridLogo.absolutePath
-        }
+        findSteamGridLogoInFolder(folder)?.let { return it }
 
         // 2) If we can uniquely identify an exe, try extracting embedded icon(s)
         val uniqueExeRel = findUniqueExeRelativeToFolder(folder)
@@ -149,18 +138,7 @@ object CustomGameScanner {
         val folder = File(folderPath)
         if (!folder.exists() || !folder.isDirectory) return null
 
-        val steamGridLogo = folder.listFiles { file ->
-            file.isFile && file.name.startsWith("steamgriddb_logo", ignoreCase = true) &&
-                (
-                    file.name.endsWith(".png", ignoreCase = true) ||
-                        file.name.endsWith(".jpg", ignoreCase = true) ||
-                        file.name.endsWith(".webp", ignoreCase = true)
-                    )
-        }?.firstOrNull()
-        if (steamGridLogo != null) {
-            Timber.tag("CustomGameScanner").d("Found SteamGridDB logo: ${steamGridLogo.absolutePath}")
-            return steamGridLogo.absolutePath
-        }
+        findSteamGridLogoInFolder(folder)?.let { return it }
 
         // 2) Try extracting from the selected container executable
         try {
@@ -213,6 +191,43 @@ object CustomGameScanner {
             Timber.tag("CustomGameScanner").d("No icon found for $appId")
         }
         return fromHeuristic
+    }
+
+    // like findIconFileForCustomGame but never triggers EXE extraction
+    fun findCachedIconForCustomGame(context: Context, appId: String): String? {
+        val folderPath = getFolderPathFromAppId(appId) ?: return null
+        val folder = File(folderPath)
+        if (!folder.exists() || !folder.isDirectory) return null
+
+        findSteamGridLogoInFolder(folder)?.let { return it }
+
+        // check for already-extracted icon from container exe
+        try {
+            val cm = ContainerManager(context)
+            val container = cm.getContainerById(appId)
+            val relExe = container?.executablePath
+            if (!relExe.isNullOrEmpty()) {
+                val exeFile = File(folder, relExe.replace('/', File.separatorChar))
+                val outIco = File(exeFile.parentFile, exeFile.nameWithoutExtension + ".extracted.ico")
+                if (outIco.exists()) return outIco.absolutePath
+            }
+        } catch (e: Exception) {
+            Timber.tag("CustomGameScanner").d(e, "Error checking cached icon for $appId")
+        }
+
+        return findNearbyImageIcon(folder, null)
+    }
+
+    private fun findSteamGridLogoInFolder(folder: File): String? {
+        val logo = folder.listFiles { file ->
+            file.isFile && file.name.startsWith("steamgriddb_logo", ignoreCase = true) &&
+                (
+                    file.name.endsWith(".png", ignoreCase = true) ||
+                        file.name.endsWith(".jpg", ignoreCase = true) ||
+                        file.name.endsWith(".webp", ignoreCase = true)
+                    )
+        }?.firstOrNull()
+        return logo?.absolutePath
     }
 
     // Shared helper for .ico/.png heuristic
