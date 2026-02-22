@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -258,8 +259,19 @@ fun XServerScreen(
     var taskAffinityMask = 0
     var taskAffinityMaskWoW64 = 0
 
+    // after process death the container may no longer exist
     val container = remember(appId) {
-        ContainerUtils.getContainer(context, appId)
+        try {
+            ContainerUtils.getContainer(context, appId)
+        } catch (e: Exception) {
+            Timber.e(e, "Container unavailable for $appId, likely process death")
+            null
+        }
+    }
+
+    if (container == null) {
+        LaunchedEffect(Unit) { navigateBack() }
+        return
     }
 
     val xServerState = rememberSaveable(stateSaver = XServerState.Saver) {
