@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -63,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.gamenative.PrefManager
+import app.gamenative.enums.StatusBarMode
 import app.gamenative.R
 import app.gamenative.data.LibraryItem
 import app.gamenative.data.GameSource
@@ -204,15 +206,14 @@ private fun LibraryScreenContent(
         }
     }
 
+    val statusBarMode = PrefManager.statusBarMode
+
     // Apply top padding differently for list vs game detail pages.
-    // On the game page we want to hide the top padding when the status bar is hidden.
     val safePaddingModifier = if (selectedLibraryItem != null) {
-        // Detail (game) page: use actual status bar height when status bar is visible,
-        // or 0.dp when status bar is hidden
-        val topPadding = if (PrefManager.hideStatusBarWhenNotInGame) {
-            0.dp
-        } else {
-            WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val topPadding = when (statusBarMode) {
+            StatusBarMode.HIDDEN -> 0.dp
+            StatusBarMode.INSET -> WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            StatusBarMode.EDGE_TO_EDGE -> WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
         }
         Modifier.padding(top = topPadding)
     } else {
@@ -220,8 +221,15 @@ private fun LibraryScreenContent(
         Modifier.displayCutoutPadding()
     }
 
+    val navBarModifier = if (statusBarMode == StatusBarMode.INSET) {
+        Modifier.navigationBarsPadding()
+    } else {
+        Modifier
+    }
+
     Box(
         Modifier.background(MaterialTheme.colorScheme.background)
+        .then(navBarModifier)
         .then(safePaddingModifier)) {
         if (selectedLibraryItem == null) {
             LibraryListPane(

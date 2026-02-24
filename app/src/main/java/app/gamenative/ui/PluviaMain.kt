@@ -45,6 +45,7 @@ import app.gamenative.R
 import app.gamenative.data.GameSource
 import app.gamenative.data.PostSyncInfo
 import app.gamenative.enums.AppTheme
+import app.gamenative.enums.StatusBarMode
 import app.gamenative.enums.LoginResult
 import app.gamenative.enums.PathType
 import app.gamenative.enums.SaveLocation
@@ -387,8 +388,7 @@ fun PluviaMain(
             // Log.d("PluviaMain", "Screen changed to $currentScreen, resetting some values")
             // TODO: remove this if statement once XServerScreen orientation change bug is fixed
             if (state.currentScreen != PluviaScreen.XServer) {
-                // Hide or show status bar based on if in game or not
-                val shouldShowStatusBar = !PrefManager.hideStatusBarWhenNotInGame
+                val shouldShowStatusBar = PrefManager.statusBarMode != StatusBarMode.HIDDEN
                 PluviaApp.events.emit(AndroidEvent.SetSystemUIVisibility(shouldShowStatusBar))
 
                 // reset system ui visibility based on user preference

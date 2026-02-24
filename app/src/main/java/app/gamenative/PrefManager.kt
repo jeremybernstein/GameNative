@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.gamenative.enums.AppTheme
+import app.gamenative.enums.StatusBarMode
 import app.gamenative.ui.enums.AppFilter
 import app.gamenative.ui.enums.HomeDestination
 import app.gamenative.ui.enums.Orientation
@@ -715,12 +716,23 @@ object PrefManager {
             setPref(OPEN_WEB_LINKS_EXTERNALLY, value)
         }
 
-    // Whether to hide the Android status bar when not in a game (in game list, settings, etc.)
-    private val HIDE_STATUS_BAR_WHEN_NOT_IN_GAME = booleanPreferencesKey("hide_status_bar_when_not_in_game")
-    var hideStatusBarWhenNotInGame: Boolean
-        get() = getPref(HIDE_STATUS_BAR_WHEN_NOT_IN_GAME, false)
+    private val STATUS_BAR_MODE = intPreferencesKey("status_bar_mode")
+    var statusBarMode: StatusBarMode
+        get() {
+            // migrate old boolean pref on first access
+            val oldKey = booleanPreferencesKey("hide_status_bar_when_not_in_game")
+            val oldValue = runBlocking { dataStore.data.first()[oldKey] }
+            if (oldValue != null) {
+                val migrated = if (oldValue) StatusBarMode.HIDDEN else StatusBarMode.EDGE_TO_EDGE
+                setPref(STATUS_BAR_MODE, migrated.ordinal)
+                removePref(oldKey)
+                return migrated
+            }
+            val value = getPref(STATUS_BAR_MODE, StatusBarMode.EDGE_TO_EDGE.ordinal)
+            return StatusBarMode.entries.getOrNull(value) ?: StatusBarMode.EDGE_TO_EDGE
+        }
         set(value) {
-            setPref(HIDE_STATUS_BAR_WHEN_NOT_IN_GAME, value)
+            setPref(STATUS_BAR_MODE, value.ordinal)
         }
 
     private val ITEMS_PER_PAGE = intPreferencesKey("items_per_page")

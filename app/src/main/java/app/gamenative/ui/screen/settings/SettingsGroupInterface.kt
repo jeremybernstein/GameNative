@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import app.gamenative.R
 import app.gamenative.PrefManager
 import app.gamenative.enums.AppTheme
+import app.gamenative.enums.StatusBarMode
 import app.gamenative.ui.component.dialog.SingleChoiceDialog
 import app.gamenative.ui.theme.settingsTileColorsAlt
 import com.alorma.compose.settings.ui.SettingsGroup
@@ -202,11 +203,12 @@ fun SettingsGroupInterface(
     var openStartScreenDialog by rememberSaveable { mutableStateOf(false) }
     var startScreenOption by rememberSaveable(openStartScreenDialog) { mutableStateOf(PrefManager.startScreen) }
 
-    // Status bar hide/show confirmation dialog
+    // Status bar mode selection
+    var openStatusBarModeDialog by rememberSaveable { mutableStateOf(false) }
     var showStatusBarRestartDialog by rememberSaveable { mutableStateOf(false) }
-    var pendingStatusBarValue by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    var pendingStatusBarMode by rememberSaveable { mutableStateOf<Int?>(null) }
     var showStatusBarLoadingDialog by rememberSaveable { mutableStateOf(false) }
-    var hideStatusBar by rememberSaveable { mutableStateOf(PrefManager.hideStatusBarWhenNotInGame) }
+    var statusBarMode by rememberSaveable { mutableStateOf(PrefManager.statusBarMode.ordinal) }
 
     // Language selection dialog
     var openLanguageDialog by rememberSaveable { mutableStateOf(false) }
@@ -390,18 +392,11 @@ fun SettingsGroupInterface(
             },
         )
 
-        SettingsSwitch(
+        SettingsMenuLink(
             colors = settingsTileColorsAlt(),
-            title = { Text(text = stringResource(R.string.settings_interface_hide_statusbar_title)) },
-            subtitle = { Text(text = stringResource(R.string.settings_interface_hide_statusbar_subtitle)) },
-            state = hideStatusBar,
-            onCheckedChange = { newValue ->
-                // Update UI immediately for responsive feel
-                hideStatusBar = newValue
-                // Store the pending value and show confirmation dialog
-                pendingStatusBarValue = newValue
-                showStatusBarRestartDialog = true
-            },
+            title = { Text(text = "${stringResource(R.string.settings_interface_statusbar_mode_title)} (${stringResource(R.string.settings_interface_restart_required_title).lowercase()})") },
+            subtitle = { Text(text = StatusBarMode.entries.getOrNull(statusBarMode)?.text ?: StatusBarMode.EDGE_TO_EDGE.text) },
+            onClick = { openStatusBarModeDialog = true },
         )
 
         // Language selection
@@ -656,32 +651,44 @@ fun SettingsGroupInterface(
         onDismiss = { openRegionDialog = false }
     )
 
+    // Status bar mode choice dialog
+    SingleChoiceDialog(
+        openDialog = openStatusBarModeDialog,
+        title = stringResource(R.string.settings_interface_statusbar_mode_title),
+        items = StatusBarMode.entries.map { it.text },
+        currentItem = statusBarMode,
+        onSelected = { index ->
+            if (index != statusBarMode) {
+                pendingStatusBarMode = index
+                showStatusBarRestartDialog = true
+            }
+            openStatusBarModeDialog = false
+        },
+        onDismiss = { openStatusBarModeDialog = false }
+    )
+
     // Status bar restart confirmation dialog
     MessageDialog(
         visible = showStatusBarRestartDialog,
         title = stringResource(R.string.settings_interface_restart_required_title),
-        message = stringResource(R.string.settings_language_restart_message),
+        message = stringResource(R.string.settings_interface_statusbar_mode_restart_message),
         confirmBtnText = stringResource(R.string.settings_language_restart_confirm),
         dismissBtnText = stringResource(R.string.cancel),
         onConfirmClick = {
             showStatusBarRestartDialog = false
-            val newValue = pendingStatusBarValue ?: return@MessageDialog
-            // Save preference and show loading dialog
-            PrefManager.hideStatusBarWhenNotInGame = newValue
+            val newMode = pendingStatusBarMode ?: return@MessageDialog
+            statusBarMode = newMode
+            PrefManager.statusBarMode = StatusBarMode.entries[newMode]
             showStatusBarLoadingDialog = true
-            pendingStatusBarValue = null
+            pendingStatusBarMode = null
         },
         onDismissRequest = {
             showStatusBarRestartDialog = false
-            // Revert toggle to original value
-            hideStatusBar = PrefManager.hideStatusBarWhenNotInGame
-            pendingStatusBarValue = null
+            pendingStatusBarMode = null
         },
         onDismissClick = {
             showStatusBarRestartDialog = false
-            // Revert toggle to original value
-            hideStatusBar = PrefManager.hideStatusBarWhenNotInGame
-            pendingStatusBarValue = null
+            pendingStatusBarMode = null
         }
     )
 
