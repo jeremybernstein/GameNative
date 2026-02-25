@@ -52,6 +52,7 @@ import app.gamenative.enums.SyncResult
 import app.gamenative.events.AndroidEvent
 import app.gamenative.service.SteamService
 import app.gamenative.service.amazon.AmazonService
+import app.gamenative.NetworkMonitor
 import app.gamenative.service.epic.EpicService
 import app.gamenative.service.gog.GOGService
 import app.gamenative.ui.component.ConnectingServersScreen
@@ -487,9 +488,14 @@ fun PluviaMain(
         }
     }
 
-    // Timeout if stuck in connecting state for 10 seconds so that its not in loading state forever
+    // skip connection attempt immediately if no internet, otherwise timeout after 10s
     LaunchedEffect(isConnecting) {
         if (isConnecting) {
+            if (!NetworkMonitor.hasInternet.value) {
+                Timber.d("No internet, skipping connection attempt")
+                isConnecting = false
+                return@LaunchedEffect
+            }
             Timber.d("Started connecting, will timeout in 10s")
             delay(10000)
             Timber.d("Timeout reached, isSteamConnected=${state.isSteamConnected}")
