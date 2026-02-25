@@ -112,7 +112,6 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import app.gamenative.service.SteamService.Companion.getAppDirPath
 import com.posthog.PostHog
-import app.gamenative.MainActivity
 import android.os.Environment
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.ContentCopy
@@ -130,7 +129,7 @@ import android.widget.Toast
 import app.gamenative.enums.Marker
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import app.gamenative.PluviaApp
+import app.gamenative.NetworkMonitor
 import app.gamenative.events.AndroidEvent
 import app.gamenative.utils.MarkerUtils
 import app.gamenative.utils.createPinnedShortcut
@@ -238,8 +237,8 @@ internal fun AppScreenContent(
     vararg optionsMenu: AppMenuOption,
 ) {
     // reactive — recomposes when network state changes
-    val hasInternet by MainActivity.hasInternet.collectAsState()
-    val wifiConnected by MainActivity.isWifiConnected.collectAsState()
+    val hasInternet by NetworkMonitor.hasInternet.collectAsState()
+    val wifiConnected by NetworkMonitor.isWifiConnected.collectAsState()
     val wifiAllowed = !PrefManager.downloadOnWifiOnly || wifiConnected
     val scrollState = rememberScrollState()
 

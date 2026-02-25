@@ -50,13 +50,6 @@ import com.winlator.inputcontrols.ControllerManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.EnumSet
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import kotlin.math.abs
 import okio.Path.Companion.toOkioPath
 import timber.log.Timber
@@ -64,49 +57,7 @@ import timber.log.Timber
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    // TODO: extract into a NetworkMonitor singleton so services can observe
-    //  state changes without coupling to MainActivity
-    // ignore VPN and mesh transports — they don't reliably indicate internet
-    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        // caps per network so we can recompute derived state on any change
-        private val networkCaps = java.util.concurrent.ConcurrentHashMap<Network, NetworkCapabilities>()
-
-        private fun skip(caps: NetworkCapabilities) =
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI_AWARE) ||
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_LOWPAN)
-
-        private fun update() {
-            val validatedCaps = networkCaps.values.filter {
-                it.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-            }
-            _hasInternet.value = validatedCaps.isNotEmpty()
-            // only count WiFi/Ethernet that is also validated (excludes captive portals)
-            _isWifiConnected.value = validatedCaps.any {
-                it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                    it.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-            }
-        }
-
-        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-            if (skip(caps)) return
-            networkCaps[network] = caps
-            update()
-        }
-
-        override fun onLost(network: Network) {
-            networkCaps.remove(network)
-            update()
-        }
-    }
-
     companion object {
-        // updated by NetworkCallback above
-        private val _hasInternet = MutableStateFlow(false)
-        val hasInternet: StateFlow<Boolean> = _hasInternet.asStateFlow()
-        private val _isWifiConnected = MutableStateFlow(false)
-        val isWifiConnected: StateFlow<Boolean> = _isWifiConnected.asStateFlow()
-
         private var totalIndex = 0
 
         private var currentOrientationChangeValue: Int = 0
@@ -191,15 +142,6 @@ class MainActivity : ComponentActivity() {
 
         handleLaunchIntent(intent)
 
-        // track real network state (callback filters out VPN/mesh transports)
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        cm.registerNetworkCallback(
-            NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build(),
-            networkCallback,
-        )
-
         // Prevent device from sleeping while app is open
         AppUtils.keepScreenOn(this)
 
@@ -245,7 +187,7 @@ class MainActivity : ComponentActivity() {
                     .components {
                         // serve cached images when device has no internet
                         add(Interceptor { chain ->
-                            val request = if (!hasInternet.value) {
+                            val request = if (!NetworkMonitor.hasInternet.value) {
                                 chain.request.newBuilder()
                                     .networkCachePolicy(CachePolicy.DISABLED)
                                     .build()
@@ -306,9 +248,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        cm.unregisterNetworkCallback(networkCallback)
 
         PluviaApp.events.emit(AndroidEvent.ActivityDestroyed)
 

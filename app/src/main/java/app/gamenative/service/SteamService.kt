@@ -11,8 +11,8 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.room.withTransaction
 import app.gamenative.BuildConfig
-import app.gamenative.MainActivity
 import app.gamenative.R
+import app.gamenative.NetworkMonitor
 import app.gamenative.PluviaApp
 import app.gamenative.PrefManager
 import app.gamenative.data.DepotInfo
@@ -291,12 +291,17 @@ class SteamService : Service(), IChallengeUrlChanged {
 
         internal var instance: SteamService? = null
 
-        val isWifiConnected: Boolean get() = MainActivity.isWifiConnected.value
+        val isWifiConnected: Boolean get() = NetworkMonitor.isWifiConnected.value
 
         /** @return true if download may proceed; false if blocked (notifies user) */
         private fun checkWifiOrNotify(): Boolean {
             if (PrefManager.downloadOnWifiOnly && !isWifiConnected) {
-                instance?.let { it.notificationHelper.notify(it.getString(R.string.download_no_wifi)) }
+                val svc = instance
+                if (svc != null) {
+                    svc.notificationHelper.notify(svc.getString(R.string.download_no_wifi))
+                } else {
+                    Timber.w("checkWifiOrNotify: no SteamService instance to notify")
+                }
                 return false
             }
             return true
@@ -1017,7 +1022,6 @@ class SteamService : Service(), IChallengeUrlChanged {
         }
 
         fun downloadApp(appId: Int, dlcAppIds: List<Int>, isUpdateOrVerify: Boolean): DownloadInfo? {
-            if (!checkWifiOrNotify()) return null
             return getAppInfoOf(appId)?.let { appInfo ->
                 val container = ContainerManager(instance!!.applicationContext).getContainerById("STEAM_${appId}")
                 val containerLanguage = if (container != null) {
@@ -2609,7 +2613,7 @@ class SteamService : Service(), IChallengeUrlChanged {
         PluviaApp.events.on<AndroidEvent.EndProcess, Unit>(onEndProcess)
 
         notificationHelper = NotificationHelper(applicationContext)
-        // pause downloads when WiFi/Ethernet is lost (state tracked by MainActivity)
+        // pause downloads when WiFi/Ethernet is lost
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onLost(network: Network) {
