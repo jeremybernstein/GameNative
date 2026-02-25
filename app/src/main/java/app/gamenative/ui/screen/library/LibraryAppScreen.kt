@@ -237,9 +237,9 @@ internal fun AppScreenContent(
     onBack: () -> Unit = {},
     vararg optionsMenu: AppMenuOption,
 ) {
-    // reactive connectivity state tracked by MainActivity's NetworkCallback
-    val hasInternet = MainActivity.hasInternet
-    val wifiConnected = MainActivity.isWifiConnected
+    // reactive — recomposes when network state changes
+    val hasInternet by MainActivity.hasInternet.collectAsState()
+    val wifiConnected by MainActivity.isWifiConnected.collectAsState()
     val wifiAllowed = !PrefManager.downloadOnWifiOnly || wifiConnected
     val scrollState = rememberScrollState()
 

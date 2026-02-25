@@ -291,7 +291,7 @@ class SteamService : Service(), IChallengeUrlChanged {
 
         internal var instance: SteamService? = null
 
-        val isWifiConnected: Boolean get() = MainActivity.isWifiConnected
+        val isWifiConnected: Boolean get() = MainActivity.isWifiConnected.value
 
         private val downloadJobs = ConcurrentHashMap<Int, DownloadInfo>()
 

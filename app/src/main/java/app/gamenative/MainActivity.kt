@@ -51,7 +51,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.Collections
 import java.util.EnumSet
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -87,24 +89,24 @@ class MainActivity : ComponentActivity() {
                 validated.remove(network)
             }
             if (isWifiOrEthernet(caps)) wifiNetworks.add(network) else wifiNetworks.remove(network)
-            _hasInternet.set(validated.isNotEmpty())
-            _isWifiConnected.set(wifiNetworks.isNotEmpty())
+            _hasInternet.value = validated.isNotEmpty()
+            _isWifiConnected.value = wifiNetworks.isNotEmpty()
         }
 
         override fun onLost(network: Network) {
             validated.remove(network)
             wifiNetworks.remove(network)
-            _hasInternet.set(validated.isNotEmpty())
-            _isWifiConnected.set(wifiNetworks.isNotEmpty())
+            _hasInternet.value = validated.isNotEmpty()
+            _isWifiConnected.value = wifiNetworks.isNotEmpty()
         }
     }
 
     companion object {
         // updated by NetworkCallback above
-        private val _hasInternet = AtomicBoolean(false)
-        val hasInternet: Boolean get() = _hasInternet.get()
-        private val _isWifiConnected = AtomicBoolean(false)
-        val isWifiConnected: Boolean get() = _isWifiConnected.get()
+        private val _hasInternet = MutableStateFlow(false)
+        val hasInternet: StateFlow<Boolean> = _hasInternet.asStateFlow()
+        private val _isWifiConnected = MutableStateFlow(false)
+        val isWifiConnected: StateFlow<Boolean> = _isWifiConnected.asStateFlow()
 
         private var totalIndex = 0
 
@@ -244,7 +246,7 @@ class MainActivity : ComponentActivity() {
                     .components {
                         // serve cached images when device has no internet
                         add(Interceptor { chain ->
-                            val request = if (!hasInternet) {
+                            val request = if (!hasInternet.value) {
                                 chain.request.newBuilder()
                                     .networkCachePolicy(CachePolicy.DISABLED)
                                     .build()
