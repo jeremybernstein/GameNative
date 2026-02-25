@@ -112,9 +112,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import app.gamenative.service.SteamService.Companion.getAppDirPath
 import com.posthog.PostHog
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import app.gamenative.MainActivity
 import android.os.Environment
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.ContentCopy
@@ -239,15 +237,9 @@ internal fun AppScreenContent(
     onBack: () -> Unit = {},
     vararg optionsMenu: AppMenuOption,
 ) {
-    // Determine Wi-Fi connectivity for 'Wi-Fi only' preference
-    val context = LocalContext.current
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-    val hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-    val wifiConnected = capabilities?.run {
-        hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-        hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-    } == true
+    // reactive connectivity state tracked by MainActivity's NetworkCallback
+    val hasInternet = MainActivity.hasInternet
+    val wifiConnected = MainActivity.isWifiConnected
     val wifiAllowed = !PrefManager.downloadOnWifiOnly || wifiConnected
     val scrollState = rememberScrollState()
 

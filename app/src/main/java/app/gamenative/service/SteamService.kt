@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.room.withTransaction
 import app.gamenative.BuildConfig
+import app.gamenative.MainActivity
 import app.gamenative.R
 import app.gamenative.PluviaApp
 import app.gamenative.PrefManager
@@ -252,8 +253,6 @@ class SteamService : Service(), IChallengeUrlChanged {
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
-    @Volatile
-    private var isWifiConnected: Boolean = true
 
     // Add these as class properties
     private var picsGetProductInfoJob: Job? = null
@@ -291,6 +290,8 @@ class SteamService : Service(), IChallengeUrlChanged {
         private val PROTOCOL_TYPES = EnumSet.of(ProtocolTypes.WEB_SOCKET)
 
         internal var instance: SteamService? = null
+
+        val isWifiConnected: Boolean get() = MainActivity.isWifiConnected
 
         private val downloadJobs = ConcurrentHashMap<Int, DownloadInfo>()
 
@@ -1008,7 +1009,7 @@ class SteamService : Service(), IChallengeUrlChanged {
 
         fun downloadApp(appId: Int, dlcAppIds: List<Int>, isUpdateOrVerify: Boolean): DownloadInfo? {
             // Enforce Wi-Fi-only downloads
-            if (PrefManager.downloadOnWifiOnly && instance?.isWifiConnected == false) {
+            if (PrefManager.downloadOnWifiOnly && !isWifiConnected) {
                 instance?.notificationHelper?.notify("Not connected to Wi‑Fi/LAN")
                 return null
             }
@@ -1360,7 +1361,7 @@ class SteamService : Service(), IChallengeUrlChanged {
             val appDirPath = getAppDirPath(appId)
 
             // Enforce Wi-Fi-only downloads
-            if (PrefManager.downloadOnWifiOnly && instance?.isWifiConnected == false) {
+            if (PrefManager.downloadOnWifiOnly && !isWifiConnected) {
                 instance?.notificationHelper?.notify("Not connected to Wi‑Fi/LAN")
                 return null
             }
@@ -2607,35 +2608,11 @@ class SteamService : Service(), IChallengeUrlChanged {
         PluviaApp.events.on<AndroidEvent.EndProcess, Unit>(onEndProcess)
 
         notificationHelper = NotificationHelper(applicationContext)
-        // Setup Wi-Fi connectivity monitoring for download-on-WiFi-only
+        // pause downloads when WiFi/Ethernet is lost (state tracked by MainActivity)
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        // Determine initial Wi-Fi state
-        val activeNetwork = connectivityManager.activeNetwork
-        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        isWifiConnected = capabilities?.run {
-            hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                    hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-        } == true
-        // Register callback for Wi-Fi connectivity
         networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                Timber.d("Wifi available")
-                isWifiConnected = true
-            }
-
-            override fun onCapabilitiesChanged(
-                network: Network,
-                caps: NetworkCapabilities,
-            ) {
-                isWifiConnected = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-            }
-
             override fun onLost(network: Network) {
-                Timber.d("Wifi lost")
-                isWifiConnected = false
                 if (PrefManager.downloadOnWifiOnly) {
-                    // Pause all ongoing downloads
                     for ((appId, info) in downloadJobs.entries.toList()) {
                         Timber.d("Cancelling job")
                         info.cancel()

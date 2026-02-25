@@ -63,14 +63,21 @@ import timber.log.Timber
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    // TODO: extract into a NetworkMonitor singleton so services can observe
+    //  state changes without coupling to MainActivity
     // ignore VPN and mesh transports — they don't reliably indicate internet
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         private val validated = Collections.synchronizedSet(mutableSetOf<Network>())
+        private val wifiNetworks = Collections.synchronizedSet(mutableSetOf<Network>())
 
         private fun skip(caps: NetworkCapabilities) =
             caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI_AWARE) ||
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_LOWPAN)
+
+        private fun isWifiOrEthernet(caps: NetworkCapabilities) =
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
 
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
             if (skip(caps)) return
@@ -79,19 +86,25 @@ class MainActivity : ComponentActivity() {
             } else {
                 validated.remove(network)
             }
+            if (isWifiOrEthernet(caps)) wifiNetworks.add(network) else wifiNetworks.remove(network)
             _hasInternet.set(validated.isNotEmpty())
+            _isWifiConnected.set(wifiNetworks.isNotEmpty())
         }
 
         override fun onLost(network: Network) {
             validated.remove(network)
+            wifiNetworks.remove(network)
             _hasInternet.set(validated.isNotEmpty())
+            _isWifiConnected.set(wifiNetworks.isNotEmpty())
         }
     }
 
     companion object {
-        // updated by NetworkCallback, read by Coil interceptor
+        // updated by NetworkCallback above
         private val _hasInternet = AtomicBoolean(false)
         val hasInternet: Boolean get() = _hasInternet.get()
+        private val _isWifiConnected = AtomicBoolean(false)
+        val isWifiConnected: Boolean get() = _isWifiConnected.get()
 
         private var totalIndex = 0
 
