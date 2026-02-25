@@ -49,7 +49,6 @@ import com.winlator.core.AppUtils
 import com.winlator.inputcontrols.ControllerManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.util.Collections
 import java.util.EnumSet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,35 +68,35 @@ class MainActivity : ComponentActivity() {
     //  state changes without coupling to MainActivity
     // ignore VPN and mesh transports — they don't reliably indicate internet
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        private val validated = Collections.synchronizedSet(mutableSetOf<Network>())
-        private val wifiNetworks = Collections.synchronizedSet(mutableSetOf<Network>())
+        // caps per network so we can recompute derived state on any change
+        private val networkCaps = java.util.concurrent.ConcurrentHashMap<Network, NetworkCapabilities>()
 
         private fun skip(caps: NetworkCapabilities) =
             caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI_AWARE) ||
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_LOWPAN)
 
-        private fun isWifiOrEthernet(caps: NetworkCapabilities) =
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        private fun update() {
+            val validatedCaps = networkCaps.values.filter {
+                it.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            }
+            _hasInternet.value = validatedCaps.isNotEmpty()
+            // only count WiFi/Ethernet that is also validated (excludes captive portals)
+            _isWifiConnected.value = validatedCaps.any {
+                it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    it.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+            }
+        }
 
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
             if (skip(caps)) return
-            if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
-                validated.add(network)
-            } else {
-                validated.remove(network)
-            }
-            if (isWifiOrEthernet(caps)) wifiNetworks.add(network) else wifiNetworks.remove(network)
-            _hasInternet.value = validated.isNotEmpty()
-            _isWifiConnected.value = wifiNetworks.isNotEmpty()
+            networkCaps[network] = caps
+            update()
         }
 
         override fun onLost(network: Network) {
-            validated.remove(network)
-            wifiNetworks.remove(network)
-            _hasInternet.value = validated.isNotEmpty()
-            _isWifiConnected.value = wifiNetworks.isNotEmpty()
+            networkCaps.remove(network)
+            update()
         }
     }
 

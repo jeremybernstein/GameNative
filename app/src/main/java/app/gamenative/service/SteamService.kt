@@ -293,6 +293,15 @@ class SteamService : Service(), IChallengeUrlChanged {
 
         val isWifiConnected: Boolean get() = MainActivity.isWifiConnected.value
 
+        /** @return true if download may proceed; false if blocked (notifies user) */
+        private fun checkWifiOrNotify(): Boolean {
+            if (PrefManager.downloadOnWifiOnly && !isWifiConnected) {
+                instance?.let { it.notificationHelper.notify(it.getString(R.string.download_no_wifi)) }
+                return false
+            }
+            return true
+        }
+
         private val downloadJobs = ConcurrentHashMap<Int, DownloadInfo>()
 
         private fun notifyDownloadStarted(appId: Int) {
@@ -1008,11 +1017,7 @@ class SteamService : Service(), IChallengeUrlChanged {
         }
 
         fun downloadApp(appId: Int, dlcAppIds: List<Int>, isUpdateOrVerify: Boolean): DownloadInfo? {
-            // Enforce Wi-Fi-only downloads
-            if (PrefManager.downloadOnWifiOnly && !isWifiConnected) {
-                instance?.notificationHelper?.notify("Not connected to Wi‑Fi/LAN")
-                return null
-            }
+            if (!checkWifiOrNotify()) return null
             return getAppInfoOf(appId)?.let { appInfo ->
                 val container = ContainerManager(instance!!.applicationContext).getContainerById("STEAM_${appId}")
                 val containerLanguage = if (container != null) {
@@ -1360,11 +1365,7 @@ class SteamService : Service(), IChallengeUrlChanged {
         ): DownloadInfo? {
             val appDirPath = getAppDirPath(appId)
 
-            // Enforce Wi-Fi-only downloads
-            if (PrefManager.downloadOnWifiOnly && !isWifiConnected) {
-                instance?.notificationHelper?.notify("Not connected to Wi‑Fi/LAN")
-                return null
-            }
+            if (!checkWifiOrNotify()) return null
             if (downloadJobs.contains(appId)) return getAppDownloadInfo(appId)
             Timber.d("depots is empty? " + downloadableDepots.isEmpty())
             if (downloadableDepots.isEmpty()) return null
@@ -2612,14 +2613,15 @@ class SteamService : Service(), IChallengeUrlChanged {
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onLost(network: Network) {
-                if (PrefManager.downloadOnWifiOnly) {
+                // only pause if no WiFi/LAN remains (avoids false pause on multi-network)
+                if (PrefManager.downloadOnWifiOnly && !isWifiConnected) {
                     for ((appId, info) in downloadJobs.entries.toList()) {
                         Timber.d("Cancelling job")
                         info.cancel()
                         PluviaApp.events.emit(AndroidEvent.DownloadPausedDueToConnectivity(appId))
                         removeDownloadJob(appId)
                     }
-                    notificationHelper.notify("Download paused – waiting for Wi-Fi/LAN")
+                    notificationHelper.notify(getString(R.string.download_paused_wifi))
                 }
             }
         }
