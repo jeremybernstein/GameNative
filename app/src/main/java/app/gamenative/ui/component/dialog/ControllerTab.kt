@@ -53,11 +53,13 @@ fun ControllerTabContent(state: ContainerConfigState, default: Boolean) {
         SettingsSwitch(
             colors = settingsTileColorsAlt(),
             title = { Text(text = stringResource(R.string.disable_mouse_input)) },
+            subtitle = { Text(text = stringResource(R.string.disable_mouse_input_description)) },
             state = config.disableMouseInput,
             onCheckedChange = { state.config.value = config.copy(disableMouseInput = it) },
         )
         SettingsSwitch(
             colors = settingsTileColorsAlt(),
+            enabled = !config.disableMouseInput,
             title = { Text(text = stringResource(R.string.touchscreen_mode)) },
             subtitle = { Text(text = stringResource(R.string.touchscreen_mode_description)) },
             state = config.touchscreenMode,
