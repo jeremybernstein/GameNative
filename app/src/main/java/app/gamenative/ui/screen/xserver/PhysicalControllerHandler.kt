@@ -150,7 +150,11 @@ class PhysicalControllerHandler(
                     val cursorSpeed = profile?.cursorSpeed ?: 1f
                     val deltaX = (mouseMoveOffset.x * 10 * cursorSpeed).toInt()
                     val deltaY = (mouseMoveOffset.y * 10 * cursorSpeed).toInt()
-                    xServer?.injectPointerMoveDelta(deltaX, deltaY)
+                    xServer?.let {
+                        // show cursor when controller simulates mouse
+                        if (!it.renderer.isCursorVisible) it.renderer.setCursorVisible(true)
+                        it.injectPointerMoveDelta(deltaX, deltaY)
+                    }
                 }
             }, 0, 1000 / 60)
         }
