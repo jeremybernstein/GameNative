@@ -606,8 +606,9 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
     }
 
     public boolean onExternalMouseEvent(MotionEvent event) {
-        // show cursor on first external mouse event
-        if (!xServer.getRenderer().isCursorVisible()) {
+        // show cursor on external mouse event
+        if (event.isFromSource(InputDevice.SOURCE_MOUSE)
+                && !xServer.getRenderer().isCursorVisible()) {
             xServer.getRenderer().setCursorVisible(true);
         }
         // one-shot: capture external mouse on first event, don't re-capture after user release
