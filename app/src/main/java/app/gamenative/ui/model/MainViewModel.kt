@@ -479,7 +479,12 @@ class MainViewModel @Inject constructor(
 
                 // Check if this is a GOG or Epic game and sync cloud saves
                 val gameSource = ContainerUtils.extractGameSourceFromContainerId(appId)
-                if (gameSource == GameSource.GOG) {
+                val container = ContainerUtils.getContainer(context, appId)
+                val localSavesOnly = container.isLocalSavesOnly
+
+                if (localSavesOnly) {
+                    Timber.tag("Exit").i("Local saves only for $appId — skipping cloud sync on exit")
+                } else if (gameSource == GameSource.GOG) {
                     Timber.tag("GOG").i("[Cloud Saves] GOG Game detected for $appId — syncing cloud saves after close")
                     try {
                         Timber.tag("GOG").d("[Cloud Saves] Starting post-game upload sync for $appId")

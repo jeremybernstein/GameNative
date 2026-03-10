@@ -151,6 +151,8 @@ public class Container {
 
     private boolean useLegacyDRM = false;
 
+    private boolean localSavesOnly = false;
+
     private boolean unpackFiles = false;
 
     private String suspendPolicy = SUSPEND_POLICY_MANUAL;
@@ -699,6 +701,8 @@ public class Container {
             // Force DLC setting
             data.put("forceDlc", forceDlc);
 
+            data.put("localSavesOnly", localSavesOnly);
+
             // Steam offline mode setting
             data.put("steamOfflineMode", steamOfflineMode);
 
@@ -892,6 +896,9 @@ public class Container {
                 case "forceDlc":
                     this.forceDlc = data.getBoolean(key);
                     break;
+                case "localSavesOnly":
+                    this.localSavesOnly = data.getBoolean(key);
+                    break;
                 case "steamOfflineMode":
                     this.steamOfflineMode = data.getBoolean(key);
                     break;
@@ -968,6 +975,14 @@ public class Container {
 
     public void setForceDlc(boolean forceDlc) {
         this.forceDlc = forceDlc;
+    }
+
+    public boolean isLocalSavesOnly() {
+        return localSavesOnly;
+    }
+
+    public void setLocalSavesOnly(boolean localSavesOnly) {
+        this.localSavesOnly = localSavesOnly;
     }
 
     public boolean isSteamOfflineMode() {

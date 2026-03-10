@@ -112,6 +112,7 @@ object ContainerUtils {
             language = PrefManager.containerLanguage,
             containerVariant = PrefManager.containerVariant,
             forceDlc = PrefManager.forceDlc,
+            localSavesOnly = PrefManager.localSavesOnly,
             steamOfflineMode = PrefManager.steamOfflineMode,
             useLegacyDRM = PrefManager.useLegacyDRM,
             unpackFiles = PrefManager.unpackFiles,
@@ -194,6 +195,7 @@ object ContainerUtils {
 		PrefManager.dinputEnabled = containerData.enableDInput
 		PrefManager.dinputMapperType = containerData.dinputMapperType.toInt()
         PrefManager.forceDlc = containerData.forceDlc
+        PrefManager.localSavesOnly = containerData.localSavesOnly
         PrefManager.steamOfflineMode = containerData.steamOfflineMode
         PrefManager.useLegacyDRM = containerData.useLegacyDRM
         PrefManager.unpackFiles = containerData.unpackFiles
@@ -290,6 +292,7 @@ object ContainerUtils {
             sdlControllerAPI = container.isSdlControllerAPI,
             useSteamInput = useSteamInput,
             forceDlc = container.isForceDlc,
+            localSavesOnly = container.isLocalSavesOnly,
             steamOfflineMode = container.isSteamOfflineMode(),
             useLegacyDRM = container.isUseLegacyDRM(),
             unpackFiles = container.isUnpackFiles(),
@@ -468,6 +471,7 @@ object ContainerUtils {
         container.setExternalDisplayMode(containerData.externalDisplayMode)
         container.setExternalDisplaySwap(containerData.externalDisplaySwap)
         container.setForceDlc(containerData.forceDlc)
+        container.setLocalSavesOnly(containerData.localSavesOnly)
         container.setSteamOfflineMode(containerData.steamOfflineMode)
         container.setUseLegacyDRM(containerData.useLegacyDRM)
         container.setUnpackFiles(containerData.unpackFiles)
@@ -837,6 +841,7 @@ object ContainerUtils {
                 dinputMapperType = PrefManager.dinputMapperType.toByte(),
                 disableMouseInput = PrefManager.disableMouseInput,
                 forceDlc = PrefManager.forceDlc,
+                localSavesOnly = PrefManager.localSavesOnly,
                 steamOfflineMode = PrefManager.steamOfflineMode,
                 useLegacyDRM = PrefManager.useLegacyDRM,
                 unpackFiles = PrefManager.unpackFiles,
