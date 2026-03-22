@@ -173,7 +173,8 @@ internal fun LibraryListPane(
             .filterNotNull()
             .distinctUntilChanged()
             .collect { lastVisibleIndex ->
-                if (lastVisibleIndex >= state.appInfoList.lastIndex &&
+                if (state.appInfoList.isNotEmpty() &&
+                    lastVisibleIndex >= state.appInfoList.lastIndex &&
                     state.appInfoList.size < state.totalAppsInFilter
                 ) {
                     onPageChange(1)

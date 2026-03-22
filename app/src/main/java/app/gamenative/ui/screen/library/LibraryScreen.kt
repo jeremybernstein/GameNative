@@ -44,6 +44,9 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.Alignment
@@ -121,6 +124,8 @@ fun HomeLibraryScreen(
     LibraryScreenContent(
         state = state,
         listState = viewModel.listState,
+        carouselListState = viewModel.carouselListState,
+        onScrollRestoreConsumed = viewModel::consumePendingScrollRestore,
         sheetState = sheetState,
         onFilterChanged = viewModel::onFilterChanged,
         onPageChange = viewModel::onPageChange,
@@ -149,6 +154,7 @@ fun HomeLibraryScreen(
 private fun LibraryScreenContent(
     state: LibraryState,
     listState: LazyGridState,
+    carouselListState: LazyListState,
     sheetState: SheetState,
     onFilterChanged: (AppFilter) -> Unit,
     onPageChange: (Int) -> Unit,
@@ -168,6 +174,7 @@ private fun LibraryScreenContent(
     onTabChanged: (LibraryTab) -> Unit,
     onPreviousTab: () -> Unit,
     onNextTab: () -> Unit,
+    onScrollRestoreConsumed: () -> Unit = {},
     isOffline: Boolean = false,
 ) {
     val context = LocalContext.current
@@ -279,7 +286,6 @@ private fun LibraryScreenContent(
     }
 
     var selectedAppId by remember { mutableStateOf<String?>(null) }
-    val carouselListState = rememberLazyListState()
     val isViewWide = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var currentPaneType by remember { mutableStateOf(PrefManager.libraryLayout) }
 
@@ -313,6 +319,36 @@ private fun LibraryScreenContent(
                 listState.firstVisibleItemIndex == 0
             }
         }
+    }
+
+    // restore scroll position after tab switch — pick the active pane's position
+    LaunchedEffect(state.pendingGridRestore, state.pendingCarouselRestore) {
+        val isCarousel = currentPaneType == PaneType.CAROUSEL
+        val pos = if (isCarousel) state.pendingCarouselRestore else state.pendingGridRestore
+        if (pos == null) return@LaunchedEffect
+        val (idx, offset) = pos
+        val itemCount = if (isCarousel) {
+            { carouselListState.layoutInfo.totalItemsCount }
+        } else {
+            { listState.layoutInfo.totalItemsCount }
+        }
+        // timeout prevents infinite suspension if saved index exceeds filtered list
+        val ready = kotlinx.coroutines.withTimeoutOrNull(3000L) {
+            snapshotFlow { itemCount() }.filter { it > idx }.first()
+        }
+        if (ready == null) {
+            onScrollRestoreConsumed()
+            return@LaunchedEffect
+        }
+        // set focus target to match so focus-bootstrap LaunchedEffect doesn't fight us
+        if (isCarousel) {
+            carouselFocusTargetListIndex = idx
+            carouselListState.scrollToItem(idx, offset)
+        } else {
+            gridFocusTargetListIndex = idx
+            listState.scrollToItem(idx, offset)
+        }
+        onScrollRestoreConsumed()
     }
 
     // Dialog state for add custom game prompt
@@ -1208,6 +1244,7 @@ private fun Preview_LibraryScreenContent() {
     PluviaTheme {
         LibraryScreenContent(
             listState = rememberLazyGridState(),
+            carouselListState = rememberLazyListState(),
             state = state,
             sheetState = sheetState,
             onIsSearching = {},

@@ -1,6 +1,7 @@
 package app.gamenative.ui.model
 
 import android.content.Context
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,8 +67,17 @@ class LibraryViewModel @Inject constructor(
     private val _state = MutableStateFlow(LibraryState(isLoading = true))
     val state: StateFlow<LibraryState> = _state.asStateFlow()
 
-    // Keep the library scroll state. This will last longer as the VM will stay alive.
+    // shared scroll state — lives in ViewModel to survive recomposition
     var listState: LazyGridState by mutableStateOf(LazyGridState(0, 0))
+    var carouselListState: LazyListState by mutableStateOf(LazyListState(0, 0))
+
+    // per-tab UI state save/restore
+    private data class TabUIState(
+        val gridPosition: Pair<Int, Int> = 0 to 0,
+        val carouselPosition: Pair<Int, Int> = 0 to 0,
+        val paginationPage: Int = 0,
+    )
+    private val tabStates = mutableMapOf<LibraryTab, TabUIState>()
 
     private val onInstallStatusChanged: (AndroidEvent.LibraryInstallStatusChanged) -> Unit = {
         onFilterApps(paginationCurrentPage)
@@ -92,6 +102,13 @@ class LibraryViewModel @Inject constructor(
     // Track if this is the first load to apply minimum load time
     private var isFirstLoad = true
 
+    // don't emit data until all sources have fired — prevents key-based scroll
+    // maintenance from jumping the grid when later sources reorder the list.
+    // count exceeds registeredCount on subsequent emissions — >= handles this correctly
+    private val collectorsRegistered = java.util.concurrent.atomic.AtomicInteger(0)
+    private val collectorsEmitted = java.util.concurrent.atomic.AtomicInteger(0)
+    private val initialLoadComplete get() = collectorsEmitted.get() >= collectorsRegistered.get()
+
     // Track debounce job for search
     private var searchDebounceJob: Job? = null
     private val SEARCH_DEBOUNCE_MS = 500L // 500ms debounce
@@ -114,12 +131,13 @@ class LibraryViewModel @Inject constructor(
     }
 
     init {
+        collectorsRegistered.incrementAndGet()
         viewModelScope.launch(Dispatchers.IO) {
             steamAppDao.getAllOwnedApps(
                 // ownerIds = SteamService.familyMembers.ifEmpty { listOf(SteamService.userSteamId!!.accountID.toInt()) },
             ).collect { apps ->
                 Timber.tag("LibraryViewModel").d("Collecting ${apps.size} apps")
-                // Check if the list has actually changed before triggering a re-filter
+                collectorsEmitted.incrementAndGet()
                 if (appList.size != apps.size) {
                     appList = apps
                     onFilterApps(paginationCurrentPage)
@@ -127,11 +145,11 @@ class LibraryViewModel @Inject constructor(
             }
         }
 
-        // Collect GOG games
+        collectorsRegistered.incrementAndGet()
         viewModelScope.launch(Dispatchers.IO) {
             gogGameDao.getAll().collect { games ->
                 Timber.tag("LibraryViewModel").d("Collecting ${games.size} GOG games")
-                // Check if the list has actually changed before triggering a re-filter
+                collectorsEmitted.incrementAndGet()
                 if (gogGameList != games) {
                     gogGameList = games
                     onFilterApps(paginationCurrentPage)
@@ -139,10 +157,11 @@ class LibraryViewModel @Inject constructor(
             }
         }
 
+        collectorsRegistered.incrementAndGet()
         viewModelScope.launch(Dispatchers.IO) {
             epicGameDao.getAll().collect { games ->
                 Timber.tag("LibraryViewModel").d("Collecting ${games.size} Epic games")
-
+                collectorsEmitted.incrementAndGet()
                 val hasChanges = epicGameList.size != games.size || epicGameList != games
                 epicGameList = games
 
@@ -152,9 +171,11 @@ class LibraryViewModel @Inject constructor(
             }
         }
 
+        collectorsRegistered.incrementAndGet()
         viewModelScope.launch(Dispatchers.IO) {
             amazonGameDao.getAll().collect { games ->
                 Timber.tag("LibraryViewModel").d("Collecting ${games.size} Amazon games")
+                collectorsEmitted.incrementAndGet()
                 val hasChanges = amazonGameList.size != games.size || amazonGameList != games
                 amazonGameList = games
                 if (hasChanges) {
@@ -228,27 +249,41 @@ class LibraryViewModel @Inject constructor(
         _state.update { it.copy(isOptionsPanelOpen = isOpen) }
     }
 
-    fun onTabChanged(tab: LibraryTab) {
-        _state.update { it.copy(currentTab = tab) }
-        onFilterApps(0) // Reset to first page and refresh
+    private fun saveAndSwitchTab(newTab: LibraryTab) {
+        val oldTab = _state.value.currentTab
+        tabStates[oldTab] = TabUIState(
+            gridPosition = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset,
+            carouselPosition = carouselListState.firstVisibleItemIndex to carouselListState.firstVisibleItemScrollOffset,
+            paginationPage = paginationCurrentPage,
+        )
+        // clear appInfoList so the grid doesn't see old-tab keys with new-tab data
+        // (LazyVerticalGrid's key-based scroll tracking would shift the viewport)
+        val restore = tabStates[newTab] ?: TabUIState()
+        _state.update { it.copy(
+            currentTab = newTab,
+            appInfoList = emptyList(),
+            pendingGridRestore = restore.gridPosition,
+            pendingCarouselRestore = restore.carouselPosition,
+        ) }
+        onFilterApps(restore.paginationPage)
     }
 
+    fun onTabChanged(tab: LibraryTab) = saveAndSwitchTab(tab)
+
     fun onNextTab() {
-        _state.update { currentState ->
-            val nextTab = currentState.currentTab.next()
-            Timber.tag("LibraryViewModel").d("Tab next via bumper: ${currentState.currentTab} -> $nextTab")
-            currentState.copy(currentTab = nextTab)
-        }
-        onFilterApps(0)
+        val nextTab = _state.value.currentTab.next()
+        Timber.tag("LibraryViewModel").d("Tab next via bumper: ${_state.value.currentTab} -> $nextTab")
+        saveAndSwitchTab(nextTab)
     }
 
     fun onPreviousTab() {
-        _state.update { currentState ->
-            val previousTab = currentState.currentTab.previous()
-            Timber.tag("LibraryViewModel").d("Tab previous via bumper: ${currentState.currentTab} -> $previousTab")
-            currentState.copy(currentTab = previousTab)
-        }
-        onFilterApps(0)
+        val previousTab = _state.value.currentTab.previous()
+        Timber.tag("LibraryViewModel").d("Tab previous via bumper: ${_state.value.currentTab} -> $previousTab")
+        saveAndSwitchTab(previousTab)
+    }
+
+    fun consumePendingScrollRestore() {
+        _state.update { it.copy(pendingGridRestore = null, pendingCarouselRestore = null) }
     }
 
     fun onSearchQuery(value: String) {
@@ -686,7 +721,7 @@ class LibraryViewModel @Inject constructor(
 
             _state.update {
                 it.copy(
-                    appInfoList = pagedList,
+                    appInfoList = if (initialLoadComplete) pagedList else emptyList(),
                     currentPaginationPage = paginationPage + 1, // visual display is not 0 indexed
                     lastPaginationPage = lastPageInCurrentFilter + 1,
                     totalAppsInFilter = totalFound,

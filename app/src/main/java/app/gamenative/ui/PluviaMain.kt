@@ -494,16 +494,8 @@ fun PluviaMain(
                                 val targetRoute = viewModel.getPersistedRoute() ?: PluviaScreen.Home.route
                                 if (currentRoute == PluviaScreen.LoginUser.route) {
                                     navController.navigateFromLoginIfNeeded(targetRoute, "LogonEnded")
-                                } else if (currentRoute == PluviaScreen.Home.route + "?offline={offline}") {
-                                    val isCurrentlyOffline = navController.currentBackStackEntry
-                                        ?.arguments?.getBoolean("offline") ?: false
-                                    if (isCurrentlyOffline) {
-                                        navController.navigate(PluviaScreen.Home.route + "?offline=false") {
-                                            popUpTo(PluviaScreen.Home.route + "?offline={offline}") {
-                                                inclusive = true
-                                            }
-                                        }
-                                    }
+                                } else if (currentRoute == PluviaScreen.Home.route) {
+                                    viewModel.setOffline(false)
                                 }
                             }
                         }
@@ -645,14 +637,13 @@ fun PluviaMain(
             if (PlatformAuthUtils.isSignedInToAnyPlatform(context) && !SteamService.keepAlive) {
                 val baseRoute = viewModel.getPersistedRoute() ?: PluviaScreen.Home.route
                 val targetRoute = if (SteamService.isLoggedIn) {
+                    viewModel.setOffline(false)
                     baseRoute
                 } else {
-                    // Non-Steam platforms: ensure offline param for Home
                     if (baseRoute.startsWith(PluviaScreen.Home.route)) {
-                        PluviaScreen.Home.route + "?offline=true"
-                    } else {
-                        baseRoute
+                        viewModel.setOffline(true)
                     }
+                    baseRoute
                 }
                 navController.navigateFromLoginIfNeeded(targetRoute, "ResumeSession")
             }
@@ -1185,13 +1176,18 @@ fun PluviaMain(
 
             val startDestination = rememberSaveable {
                 when {
-                    SteamService.isLoggedIn -> PluviaScreen.Home.route + "?offline=false"
+                    SteamService.isLoggedIn -> {
+                        viewModel.setOffline(false)
+                        PluviaScreen.Home.route
+                    }
                     // skip login screen if any service has stored credentials
                     (PrefManager.username.isNotEmpty() && PrefManager.refreshToken.isNotEmpty()) ||
                         GOGService.hasStoredCredentials(context) ||
                         EpicService.hasStoredCredentials(context) ||
-                        AmazonService.hasStoredCredentials(context) ->
-                        PluviaScreen.Home.route + "?offline=true"
+                        AmazonService.hasStoredCredentials(context) -> {
+                        viewModel.setOffline(true)
+                        PluviaScreen.Home.route
+                    }
                     else -> PluviaScreen.LoginUser.route
                 }
             }
@@ -1206,10 +1202,12 @@ fun PluviaMain(
                         connectionState = state.connectionState,
                         onRetryConnection = viewModel::retryConnection,
                         onContinueOffline = {
-                            navController.navigate(PluviaScreen.Home.route + "?offline=true")
+                            viewModel.setOffline(true)
+                            navController.navigate(PluviaScreen.Home.route)
                         },
                         onPlatformSignedIn = {
-                            navController.navigate(PluviaScreen.Home.route + "?offline=true") {
+                            viewModel.setOffline(true)
+                            navController.navigate(PluviaScreen.Home.route) {
                                 popUpTo(PluviaScreen.LoginUser.route) { inclusive = true }
                             }
                         },
@@ -1217,16 +1215,10 @@ fun PluviaMain(
                 }
                 /** Library, Downloads, Friends **/
                 composable(
-                    route = PluviaScreen.Home.route + "?offline={offline}",
+                    route = PluviaScreen.Home.route,
                     deepLinks = listOf(navDeepLink { uriPattern = "pluvia://home" }),
-                    arguments = listOf(
-                        navArgument("offline") {
-                            type = NavType.BoolType
-                            defaultValue = false // default when the query param isn’t present
-                        },
-                    ),
-                ) { backStackEntry ->
-                    val isOffline = backStackEntry.arguments?.getBoolean("offline") ?: false
+                ) {
+                    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
                     // Show update/crash/support dialogs when Home is first displayed
                     // Skip when offline with Steam credentials (avoid flash when Steam reconnects)
@@ -1280,7 +1272,7 @@ fun PluviaMain(
                             viewModel.setLaunchedAppId(appId)
                             viewModel.setBootToContainer(asContainer)
                             viewModel.setTestGraphics(false)
-                            viewModel.setOffline(isOffline)
+
                             preLaunchApp(
                                 context = context,
                                 appId = appId,
@@ -1297,7 +1289,7 @@ fun PluviaMain(
                             viewModel.setLaunchedAppId(appId)
                             viewModel.setBootToContainer(true)
                             viewModel.setTestGraphics(true)
-                            viewModel.setOffline(isOffline)
+
                             preLaunchApp(
                                 context = context,
                                 appId = appId,

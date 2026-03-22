@@ -49,6 +49,10 @@ data class LibraryState(
     // Current library tab for quick filter access
     val currentTab: LibraryTab = LibraryTab.ALL,
 
+    // scroll to this index+offset after tab switch, then clear
+    val pendingGridRestore: Pair<Int, Int>? = null,
+    val pendingCarouselRestore: Pair<Int, Int>? = null,
+
     // Per-source game counts for tab badges
     val allCount: Int = 0,
     val steamCount: Int = 0,
