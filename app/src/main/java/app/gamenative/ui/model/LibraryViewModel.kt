@@ -42,6 +42,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.EnumSet
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.math.min
@@ -93,6 +94,12 @@ class LibraryViewModel @Inject constructor(
     // Track if this is the first load to apply minimum load time
     private var isFirstLoad = true
 
+    // don't emit data until all sources have fired once — prevents keyed grid
+    // from jumping as later sources reorder the combined list
+    private enum class SourceKind { STEAM, GOG, EPIC, AMAZON }
+    private val sourcesReady = ConcurrentHashMap.newKeySet<SourceKind>()
+    private fun allSourcesReady() = sourcesReady.size >= SourceKind.entries.size
+
     // Track debounce job for search
     private var searchDebounceJob: Job? = null
     private val SEARCH_DEBOUNCE_MS = 500L // 500ms debounce
@@ -114,13 +121,17 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun collectSource(block: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) { block() }
+    }
+
     init {
-        viewModelScope.launch(Dispatchers.IO) {
+        collectSource {
             steamAppDao.getAllOwnedApps(
                 // ownerIds = SteamService.familyMembers.ifEmpty { listOf(SteamService.userSteamId!!.accountID.toInt()) },
             ).collect { apps ->
                 Timber.tag("LibraryViewModel").d("Collecting ${apps.size} apps")
-                // Check if the list has actually changed before triggering a re-filter
+                sourcesReady.add(SourceKind.STEAM)
                 if (appList.size != apps.size) {
                     appList = apps
                     onFilterApps(paginationCurrentPage)
@@ -128,11 +139,10 @@ class LibraryViewModel @Inject constructor(
             }
         }
 
-        // Collect GOG games
-        viewModelScope.launch(Dispatchers.IO) {
+        collectSource {
             gogGameDao.getAll().collect { games ->
                 Timber.tag("LibraryViewModel").d("Collecting ${games.size} GOG games")
-                // Check if the list has actually changed before triggering a re-filter
+                sourcesReady.add(SourceKind.GOG)
                 if (gogGameList != games) {
                     gogGameList = games
                     onFilterApps(paginationCurrentPage)
@@ -140,10 +150,10 @@ class LibraryViewModel @Inject constructor(
             }
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        collectSource {
             epicGameDao.getAll().collect { games ->
                 Timber.tag("LibraryViewModel").d("Collecting ${games.size} Epic games")
-
+                sourcesReady.add(SourceKind.EPIC)
                 val hasChanges = epicGameList.size != games.size || epicGameList != games
                 epicGameList = games
 
@@ -153,9 +163,10 @@ class LibraryViewModel @Inject constructor(
             }
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        collectSource {
             amazonGameDao.getAll().collect { games ->
                 Timber.tag("LibraryViewModel").d("Collecting ${games.size} Amazon games")
+                sourcesReady.add(SourceKind.AMAZON)
                 val hasChanges = amazonGameList.size != games.size || amazonGameList != games
                 amazonGameList = games
                 if (hasChanges) {
@@ -231,25 +242,22 @@ class LibraryViewModel @Inject constructor(
 
     fun onTabChanged(tab: LibraryTab) {
         _state.update { it.copy(currentTab = tab) }
-        onFilterApps(0) // Reset to first page and refresh
+        onFilterApps(0)
+        viewModelScope.launch { listState.scrollToItem(0) }
     }
 
     fun onNextTab() {
-        _state.update { currentState ->
-            val nextTab = currentState.currentTab.next()
-            Timber.tag("LibraryViewModel").d("Tab next via bumper: ${currentState.currentTab} -> $nextTab")
-            currentState.copy(currentTab = nextTab)
-        }
-        onFilterApps(0)
+        val current = _state.value.currentTab
+        val next = current.next()
+        Timber.tag("LibraryViewModel").d("Tab next via bumper: $current -> $next")
+        onTabChanged(next)
     }
 
     fun onPreviousTab() {
-        _state.update { currentState ->
-            val previousTab = currentState.currentTab.previous()
-            Timber.tag("LibraryViewModel").d("Tab previous via bumper: ${currentState.currentTab} -> $previousTab")
-            currentState.copy(currentTab = previousTab)
-        }
-        onFilterApps(0)
+        val current = _state.value.currentTab
+        val previous = current.previous()
+        Timber.tag("LibraryViewModel").d("Tab previous via bumper: $current -> $previous")
+        onTabChanged(previous)
     }
 
     fun onSearchQuery(value: String) {
@@ -350,8 +358,12 @@ class LibraryViewModel @Inject constructor(
     }
 
     private fun onFilterApps(paginationPage: Int = 0): Job {
-        Timber.tag("LibraryViewModel").d("onFilterApps - appList.size: ${appList.size}, isFirstLoad: $isFirstLoad")
+        Timber.tag("LibraryViewModel").d("onFilterApps - appList.size: ${appList.size}, isFirstLoad: $isFirstLoad, allSourcesReady: ${allSourcesReady()}")
         return viewModelScope.launch(Dispatchers.IO) {
+            // don't touch state until every source has emitted at least once —
+            // partial updates cause empty→populated list transitions that reset
+            // scroll position and can pop navigation
+            if (!allSourcesReady()) return@launch
             _state.update { it.copy(isLoading = true) }
 
             val currentState = _state.value
@@ -702,7 +714,7 @@ class LibraryViewModel @Inject constructor(
                     currentPaginationPage = paginationPage + 1, // visual display is not 0 indexed
                     lastPaginationPage = lastPageInCurrentFilter + 1,
                     totalAppsInFilter = totalFound,
-                    isLoading = false, // Loading complete
+                    isLoading = false,
                     // Per-source counts for tab badges
                     // Use user prefs + auth state only (not current tab) so badges stay stable across tab switches
                     allCount = (if (currentState.showSteamInLibrary) steamEntries.size else 0) +
