@@ -1377,4 +1377,7 @@
     <string name="review_overwhelmingly_negative">壓倒性負評</string>
     <string name="settings_interface_show_recommendations_title">顯示遊戲推薦</string>
     <string name="settings_interface_show_recommendations_subtitle">在遊戲庫中顯示精選獨立遊戲。保持開啟有助於支持獨立開發者和 GameNative。</string>
+    <string name="easter_egg_dvd_mode">搖勻，不要攪拌</string>
+    <string name="settings_dvd_mode_title">DVD 彈跳模式</string>
+    <string name="settings_dvd_mode_subtitle">下載時預設顯示彈跳圖示</string>
 </resources>

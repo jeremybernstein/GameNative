@@ -1251,4 +1251,7 @@
     <string name="review_overwhelmingly_negative">Overvældende negativ</string>
     <string name="settings_interface_show_recommendations_title">Vis spilanbefalinger</string>
     <string name="settings_interface_show_recommendations_subtitle">Vis udvalgte indie-spil i dit bibliotek. At holde dette aktiveret hjælper med at støtte indie-udviklere og GameNative.</string>
+    <string name="easter_egg_dvd_mode">Rystet, ikke rørt</string>
+    <string name="settings_dvd_mode_title">DVD-bounce-tilstand</string>
+    <string name="settings_dvd_mode_subtitle">Vis hoppende ikon som standard under downloads</string>
 </resources>

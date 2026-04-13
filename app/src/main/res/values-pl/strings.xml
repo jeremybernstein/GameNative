@@ -1384,4 +1384,7 @@
     <string name="review_overwhelmingly_negative">Przytłaczająco negatywne</string>
     <string name="settings_interface_show_recommendations_title">Pokaż rekomendacje gier</string>
     <string name="settings_interface_show_recommendations_subtitle">Wyświetla wyselekcjonowane gry indie w twojej bibliotece. Pozostawienie tego włączonego wspiera niezależnych deweloperów i GameNative.</string>
+    <string name="easter_egg_dvd_mode">Wstrząśnięte, nie mieszane</string>
+    <string name="settings_dvd_mode_title">Tryb odbijania DVD</string>
+    <string name="settings_dvd_mode_subtitle">Domyślnie pokazuj odbijającą się ikonę podczas pobierania</string>
 </resources>

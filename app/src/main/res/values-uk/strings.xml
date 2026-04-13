@@ -1380,4 +1380,7 @@
     <string name="review_overwhelmingly_negative">Надзвичайно негативні</string>
     <string name="settings_interface_show_recommendations_title">Показувати рекомендації ігор</string>
     <string name="settings_interface_show_recommendations_subtitle">Показує підібрані інді-ігри у вашій бібліотеці. Залишаючи це увімкненим, ви підтримуєте інді-розробників та GameNative.</string>
+    <string name="easter_egg_dvd_mode">Збовтати, але не змішувати</string>
+    <string name="settings_dvd_mode_title">Режим відскоку DVD</string>
+    <string name="settings_dvd_mode_subtitle">За замовчуванням показувати стрибаючу іконку під час завантажень</string>
 </resources>

@@ -1385,4 +1385,7 @@
     <string name="review_overwhelmingly_negative">압도적으로 부정적</string>
     <string name="settings_interface_show_recommendations_title">게임 추천 표시</string>
     <string name="settings_interface_show_recommendations_subtitle">라이브러리에 엄선된 인디 게임을 표시합니다. 이 기능을 켜두면 인디 개발자와 GameNative를 지원하는 데 도움이 됩니다.</string>
+    <string name="easter_egg_dvd_mode">젓지 말고 흔들어서</string>
+    <string name="settings_dvd_mode_title">DVD 바운스 모드</string>
+    <string name="settings_dvd_mode_subtitle">다운로드 중 기본적으로 튕기는 아이콘 표시</string>
 </resources>

@@ -1387,4 +1387,7 @@
     <string name="review_overwhelmingly_negative">Abrumadoramente negativo</string>
     <string name="settings_interface_show_recommendations_title">Mostrar recomendaciones de juegos</string>
     <string name="settings_interface_show_recommendations_subtitle">Muestra juegos indie seleccionados en tu biblioteca. Mantenerlo activado ayuda a apoyar a los desarrolladores indie y a GameNative.</string>
+    <string name="easter_egg_dvd_mode">Agitado, no revuelto</string>
+    <string name="settings_dvd_mode_title">Modo rebote DVD</string>
+    <string name="settings_dvd_mode_subtitle">Mostrar icono rebotando por defecto durante las descargas</string>
 </resources>

@@ -1386,4 +1386,7 @@
     <string name="review_overwhelmingly_negative">Copleșitor de negativ</string>
     <string name="settings_interface_show_recommendations_title">Afișează recomandări de jocuri</string>
     <string name="settings_interface_show_recommendations_subtitle">Afișează jocuri indie selectate în biblioteca ta. Păstrând această opțiune activată, sprijini dezvoltatorii indie și GameNative.</string>
+    <string name="easter_egg_dvd_mode">Agitat, nu amestecat</string>
+    <string name="settings_dvd_mode_title">Mod ricoșeu DVD</string>
+    <string name="settings_dvd_mode_subtitle">Afișează implicit pictograma săltăreață în timpul descărcărilor</string>
 </resources>

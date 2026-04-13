@@ -1374,4 +1374,7 @@
     <string name="review_overwhelmingly_negative">差评如潮</string>
     <string name="settings_interface_show_recommendations_title">显示游戏推荐</string>
     <string name="settings_interface_show_recommendations_subtitle">在游戏库中显示精选独立游戏。保持开启有助于支持独立开发者和 GameNative。</string>
+    <string name="easter_egg_dvd_mode">摇匀，不要搅拌</string>
+    <string name="settings_dvd_mode_title">DVD 弹跳模式</string>
+    <string name="settings_dvd_mode_subtitle">下载时默认显示弹跳图标</string>
 </resources>

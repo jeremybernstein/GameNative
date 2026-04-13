@@ -1321,4 +1321,7 @@
     <string name="review_overwhelmingly_negative">Überwältigend negativ</string>
     <string name="settings_interface_show_recommendations_title">Spielempfehlungen anzeigen</string>
     <string name="settings_interface_show_recommendations_subtitle">Zeigt kuratierte Indie-Spiele in deiner Bibliothek. Aktiviert lassen unterstützt Indie-Entwickler und GameNative.</string>
+    <string name="easter_egg_dvd_mode">Geschüttelt, nicht gerührt</string>
+    <string name="settings_dvd_mode_title">DVD-Bounce-Modus</string>
+    <string name="settings_dvd_mode_subtitle">Springendes Symbol während Downloads standardmäßig anzeigen</string>
 </resources>
